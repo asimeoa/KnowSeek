@@ -1,0 +1,18 @@
+#Standard-Tools for RAG-System (Retrieval Augmented Generation)
+# AI & LLM Frameworks
+langchain
+openai
+sentence-transformers
+
+# Vector Database & Data Handling
+numpy
+pandas
+chromadb
+
+# API & Web Server (für das Backend)
+fastapi
+uvicorn
+
+# Document Processing
+pypdf
+python-docx
