@@ -32,7 +32,7 @@ KnowSeek is a modular intelligence platform designed for the automotive and manu
 *Note: This project is currently in the conceptual & architectural phase.*
 
 1. **Clone the repository:**
-   `git clone https://github.com/DEIN-USERNAME/KnowSeek.git`
+   `git clone https://github.com/asimeoa/KnowSeek.git`
 2. **Create a virtual environment:**
    `python -m venv .venv`
 3. **Install dependencies:**
