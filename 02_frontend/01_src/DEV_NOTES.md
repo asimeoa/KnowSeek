@@ -33,8 +33,8 @@ After running `npm run dev`, the terminal will show:
 ```
 VITE v5.4.21  ready in ~200ms
 
-➜  Local:    http://localhost:8080/ or :8081
-➜  Network:  http://192.168.178.23:8080/ or :8081
+➜  Local:    http://localhost:8080/
+➜  Network:  http://192.168.178.23:8080/
 ```
 
 > ⚠️ The port may vary — always check the terminal output.
