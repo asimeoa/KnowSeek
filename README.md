@@ -11,10 +11,10 @@ Hier werden die technischen Säulen der Plattform beschrieben.
 ### 1.1 🔍 PartSeek
 Find existing parts by geometry and metadata. Stop reinventing the wheel.
 
-### 1.2 📄 DocumentSeek
+### 1.2 📄 DocSeek
 Instant access to reports, manuals, and customer presentations.
 
-### 1.3 📏 StandardSeek
+### 1.3 📏 NormSeek
 Automatic compliance check for technical norms and OEM standards.
 
 ### 1.4 💰 CostSeek
