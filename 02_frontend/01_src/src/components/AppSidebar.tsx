@@ -16,8 +16,8 @@ interface Module {
 export const modules: Module[] = [
   { id: 'docseek', name: 'DocSeek.Ai', color: '#10B981', iconColor: '#10B981', tooltipColor: '#34D399', description: 'Search all company documents', active: true },
   { id: 'partseek', name: 'PartSeek.Ai', color: '#0EA5E9', iconColor: '#0EA5E9', tooltipColor: '#38BDF8', description: 'Find internal standard parts', active: true },
-  { id: 'normseek', name: 'NormSeek.Ai', color: '#C7D2FE', iconColor: '#C7D2FE', tooltipColor: '#C7D2FE', description: 'Compare against ISO & OEM standards', active: false },
-  { id: 'costseek', name: 'CostSeek.Ai', color: '#FDB896', iconColor: '#FDB896', tooltipColor: '#FDB896', description: 'Design-to-cost analysis', active: false },
+  { id: 'normseek', name: 'NormSeek.Ai', color: '#9199F4', iconColor: '#9199F4', tooltipColor: '#9199F4', description: 'Compare against ISO & OEM standards', active: false },
+  { id: 'costseek', name: 'CostSeek.Ai', color: '#FC9D57', iconColor: '#FC9D57', tooltipColor: '#FC9D57', description: 'Design-to-cost analysis', active: false },
 ];
 
 const DocSeekIcon = ({ color, size = 22 }: { color: string; size?: number }) => (
@@ -139,17 +139,16 @@ const AppSidebar: React.FC<SidebarProps> = ({ activeModule, onModuleChange }) =>
               onMouseLeave={handleItemLeave}
               className="flex items-center gap-3 rounded-lg px-2 py-2.5 transition-colors duration-200 hover-lift relative"
               style={{
-                opacity,
                 background: isActive ? `${mod.color}14` : 'transparent',
               }}
             >
-              <div className={isActive ? 'breathing-glow' : ''} style={{ color: mod.iconColor, display: 'flex' }}>
+              <div className={`${isActive ? 'breathing-glow' : ''} ${mod.id === 'normseek' ? 'pulse-indigo' : ''} ${mod.id === 'costseek' ? 'pulse-orange' : ''}`} style={{ color: mod.iconColor, display: 'flex', borderRadius: '6px' }}>
                 <ModuleIcon moduleId={mod.id} color={mod.iconColor} size={22} />
               </div>
               {hovered && (
                 <motion.span
                   initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  animate={{ opacity: mod.active ? 1 : 0.5, x: 0 }}
                   transition={{ duration: 0.15 }}
                   className="text-sm font-semibold whitespace-nowrap"
                   style={{ color: mod.iconColor }}
@@ -165,7 +164,6 @@ const AppSidebar: React.FC<SidebarProps> = ({ activeModule, onModuleChange }) =>
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              {/* Tooltip on long hover (when sidebar is collapsed) */}
               {!hovered && tooltipId === mod.id && (
                 <div
                   className="sidebar-tooltip visible"

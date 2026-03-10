@@ -9,8 +9,8 @@ import PartSeekView from '../components/PartSeekView';
 const moduleColors: Record<ModuleId, string> = {
   docseek: '#10B981',
   partseek: '#0EA5E9',
-  normseek: '#C7D2FE',
-  costseek: '#FDB896',
+  normseek: '#A5B4FC',
+  costseek: '#FCA773',
 };
 
 const Index = () => {
@@ -44,7 +44,7 @@ const Index = () => {
       <AppSidebar activeModule={activeModule} onModuleChange={handleModuleChange} />
 
       {/* Main content */}
-      <main className="pt-[56px] pl-[48px] min-h-screen">
+      <main className="pt-[56px] pl-[48px] min-h-screen" style={{ overflow: 'visible' }}>
         <div className="p-6 sm:p-10">
           <AnimatePresence mode="wait">
             <motion.div
@@ -55,7 +55,7 @@ const Index = () => {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="flex flex-col items-center"
             >
-              <div className="w-full max-w-2xl mt-8">
+              <div className="w-full max-w-2xl mt-8" style={{ padding: '0 12px', overflow: 'visible' }}>
                 <SearchBlock
                   moduleId={activeModule}
                   onSearch={handleSearch}
