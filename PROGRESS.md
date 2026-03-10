@@ -1,7 +1,7 @@
 # 🚀 KnowSeek.ai Project Progress
 
 ## 🚦 Aktueller Status: [Woche 1 - Tag 1]
-**Nächstes Ziel:** RAG-Pipeline mit Volvo-Testdaten aufsetzen.
+**Nächstes Ziel:** RAG-Pipeline mit Testdaten aufsetzen.
 
 ---
 

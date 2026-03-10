@@ -9,6 +9,15 @@ interface SearchBlockProps {
   hasResults: boolean;
 }
 
+const getInwardGlow = (id: ModuleId): string => {
+  switch (id) {
+    case 'docseek': return 'inset 0 0 20px rgba(16,185,129,0.08), inset 0 0 8px rgba(16,185,129,0.05), 0 0 25px rgba(16,185,129,0.25), 0 0 50px rgba(16,185,129,0.12)';
+    case 'partseek': return 'inset 0 0 20px rgba(14,165,233,0.08), inset 0 0 8px rgba(14,165,233,0.05), 0 0 25px rgba(14,165,233,0.25), 0 0 50px rgba(14,165,233,0.12)';
+    case 'normseek': return 'inset 0 0 20px rgba(165,180,252,0.08), inset 0 0 8px rgba(165,180,252,0.05), 0 0 12px rgba(165,180,252,0.07), 0 0 24px rgba(165,180,252,0.04)';
+    case 'costseek': return 'inset 0 0 20px rgba(252,167,115,0.08), inset 0 0 8px rgba(252,167,115,0.05), 0 0 12px rgba(252,167,115,0.07), 0 0 24px rgba(252,167,115,0.04)';
+  }
+};
+
 const SearchBlock: React.FC<SearchBlockProps> = ({ moduleId, onSearch, hasResults }) => {
   const [query, setQuery] = useState('');
   const mod = modules.find(m => m.id === moduleId)!;
@@ -47,17 +56,19 @@ const SearchBlock: React.FC<SearchBlockProps> = ({ moduleId, onSearch, hasResult
         <span className="text-[15px] font-bold" style={{ color: mod.color }}>{mod.name}</span>
       </div>
 
-      {/* 4px gap */}
-      <div style={{ height: 4 }} />
+      {/* 15px gap for glow breathing room */}
+      <div style={{ height: 15 }} />
 
       {/* Box 2 — Search Input (PULSES when empty) */}
       <form
         onSubmit={handleSubmit}
-        className={`flex items-center gap-3 px-4 py-[18px] ${isPulsing ? pulseClass : ''}`}
+        className={`flex items-center gap-3 px-4 ${isPulsing ? pulseClass : ''}`}
         style={{
           borderRadius: 12,
           border: `1px solid ${mod.color}${isPulsing ? '59' : '99'}`,
           background: `${mod.color}0A`,
+          height: 76,
+          boxShadow: getInwardGlow(moduleId),
           transition: 'border-color 0.3s, box-shadow 0.3s',
         }}
       >
