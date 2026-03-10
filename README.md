@@ -1,76 +1,126 @@
-# KnowSeek 🧠
-> **Stop searching. Find your own knowledge and use it!**
+# KnowSeek.Ai 🧠
+> **Stop searching. Start knowing.**
 
-KnowSeek is a modular intelligence platform designed for the automotive and manufacturing industry (SMEs). It connects your company's hidden data into one central, searchable brain – **100% on-premise and secure.**
+**Version: rev02_work — Last updated: 09.03.2026**
 
----
-
-## 1. 🛠 The 4 Core Modules
-Hier werden die technischen Säulen der Plattform beschrieben.
-
-### 1.1 🔍 PartSeek
-Find existing parts by geometry and metadata. Stop reinventing the wheel.
-
-### 1.2 📄 DocSeek
-Instant access to reports, manuals, and customer presentations.
-
-### 1.3 📏 NormSeek
-Automatic compliance check for technical norms and OEM standards.
-
-### 1.4 💰 CostSeek
-Real-time price feedback during the design phase (Design-to-Cost).
+KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
 ---
 
-## 2. 🔒 Security & Privacy
-Warum KnowSeek für den deutschen Mittelstand sicher ist.
+## 1. 🛠 Modules
 
-### 2.1 On-Premise
-The AI runs locally on your server. No data leaves the building.
+### 1.1 📄 DocSeek.Ai — ✅ MVP
+Ask any question about your technical documents and get an instant answer. Works with OEM specs, internal reports, and customer requirements. Also spots differences between document versions automatically.
 
-### 2.2 GDPR Compliant
-Built to meet the highest European data standards (DSGVO).
+### 1.2 🔍 PartSeek.Ai — ✅ MVP
+Describe a part in plain text or upload a photo and find the matching component in your parts library. Shows dimensions, material, strength values, and which OEM it applies to.
 
-### 2.3 IP Protection
-Your intellectual property is safe and stays your competitive advantage.
+### 1.3 📏 NormSeek.Ai — *(Phase 2)*
+Automatically checks your product data against ISO and OEM standards to catch compliance issues early.
 
----
-
-## 3. 📈 Why KnowSeek?
-Der geschäftliche Mehrwert auf einen Blick.
-
-### 3.1 Cost Reduction
-Save Development Costs through part reuse.
-
-### 3.2 Efficiency
-Faster onboarding for new engineers and reduced search times.
-
-### 3.3 Risk Mitigation
-Zero Risk: No cloud dependence, no external data processing.
+### 1.4 💰 CostSeek.Ai — *(Phase 2)*
+Shows the cost impact of design decisions while you are still in the development phase — before it gets expensive.
 
 ---
 
-## 4. 🚀 Development Setup
-Technische Anleitung für Entwickler und die lokale Testumgebung.
+## 2. 🔒 Privacy & Security
 
-### 4.1 Prerequisites
-*Note: This project is currently in the conceptual & architectural phase.*
-1. **Clone the repository:**
-   `git clone https://github.com/asimeoa/KnowSeek.git`
-
-### 4.2 Environment (Python)
-2. **Create a virtual environment:**
-   `python -m venv .venv`
-3. **Install dependencies:**
-   `pip install -r requirements.txt`
-
-### 4.3 Infrastructure (Docker)
-*Platzhalter für zukünftige Docker-Anweisungen.*
+- **On-Premise** — The AI runs on your local machine. Nothing leaves your network.
+- **GDPR Ready** — Fully compliant with European data protection law (DSGVO).
+- **IP Safe** — Your technical knowledge stays yours.
 
 ---
 
-## 5. 📊 Project Status
-**Current Phase:** Architecture defined. Core modules in development.
+## 3. 📈 Why KnowSeek.Ai?
+
+- Engineers find answers in seconds instead of hours
+- New team members get up to speed faster
+- No cloud costs, no data risk, no vendor lock-in
+- Works in German and English out of the box
 
 ---
-© 2026 KnowSeek – Efficiency through Intelligence.
+
+## 4. 🧰 Tech Stack
+
+### Currently Built
+| Layer | Technology |
+|-------|------------|
+| Frontend | React, Vite, TailwindCSS, Framer Motion, shadcn/ui |
+| DevOps | Git, GitHub |
+
+### Planned
+| Layer | Technology |
+|-------|------------|
+| Backend | Python, FastAPI, LangChain |
+| AI / ML | Ollama (Llama3) |
+| Vector Database | ChromaDB |
+| Experiment Tracking | MLFlow (local) |
+| Infrastructure | Docker |
+| Testing | Pytest |
+
+---
+
+## 5. 🚀 Run Locally
+
+### What you need
+- Node.js v18 or higher
+- npm v9 or higher
+- Python 3.11 or higher *(for backend and MLFlow — coming soon)*
+
+### Start the frontend
+```bash
+# Step 1 — Clone the repo
+git clone https://github.com/asimeoa/KnowSeek.git
+
+# Step 2 — Go to the frontend folder
+cd 02_frontend/01_src
+
+# Step 3 — Install packages (only needed once)
+npm install
+
+# Step 4 — Start the app
+npm run dev
+```
+
+Open your browser and go to the URL shown in the terminal — usually `http://localhost:8080` or `http://localhost:8081`.
+
+### Stop the app
+Press `Ctrl + C` in the terminal.
+
+### Start MLFlow *(coming soon)*
+MLFlow is used to track and compare AI model experiments locally.
+```bash
+# Start MLFlow UI
+mlflow ui
+
+# Open in browser
+http://127.0.0.1:5000
+```
+All experiment data stays on your machine — nothing is sent to the cloud.
+
+---
+
+## 6. 📊 Current Status
+
+| Component | Version | Status |
+|-----------|---------|--------|
+| Frontend UI | rev02_work | In progress |
+| Frontend Fixes | rev02_001 | Pending |
+| Backend | - | Not started |
+| Vector DB (ChromaDB) | - | Not started |
+| AI Model (Ollama) | - | Not started |
+| Experiment Tracking (MLFlow) | - | Not started |
+| EDA Notebook | - | Not started |
+
+---
+
+## 7. 📅 Key Dates
+
+| Date | Goal |
+|------|------|
+| 20.03.2026 | Midterm — business case, EDA, model comparison |
+| 27.03.2026 | Final — live demo + 10 min presentation |
+
+---
+
+*© 2026 KnowSeek.Ai — Efficiency through Intelligence.*
