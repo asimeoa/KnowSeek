@@ -1,7 +1,7 @@
 # KnowSeek.Ai 🧠
 > **Stop searching. Start knowing.**
 
-**Version: rev02_work — Last updated: 09.03.2026**
+**Version: rev02_001 — Last updated: 11.03.2026 — Branch: main_sia_03**
 
 KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
@@ -51,8 +51,8 @@ Shows the cost impact of design decisions while you are still in the development
 ### Planned
 | Layer | Technology |
 |-------|------------|
-| Backend | Python, FastAPI, LangChain |
-| AI / ML | Ollama (Llama3) |
+| Backend | Python 3.11.3, FastAPI, LangChain |
+| AI / ML | Ollama 0.17.7 (Llama3) |
 | Vector Database | ChromaDB |
 | Experiment Tracking | MLFlow (local) |
 | Infrastructure | Docker |
@@ -65,7 +65,9 @@ Shows the cost impact of design decisions while you are still in the development
 ### What you need
 - Node.js v18 or higher
 - npm v9 or higher
-- Python 3.11 or higher *(for backend and MLFlow — coming soon)*
+- Python **3.11.3** (exact version required)
+- pyenv
+- Ollama 0.17.7
 
 ### Start the frontend
 ```bash
@@ -87,30 +89,57 @@ Open your browser and go to the URL shown in the terminal — usually `http://lo
 ### Stop the app
 Press `Ctrl + C` in the terminal.
 
-### Start MLFlow *(coming soon)*
-MLFlow is used to track and compare AI model experiments locally.
+### Set up Python environment *(backend — coming soon)*
 ```bash
+# Step 1 — Set Python version
+pyenv local 3.11.3
+
+# Step 2 — Create virtual environment
+python -m venv .venv
+
+# Step 3 — Activate environment
+source .venv/bin/activate          # macOS / Linux
+# .venv\Scripts\Activate.ps1      # Windows PowerShell
+# source .venv/Scripts/activate   # Windows Git-Bash
+
+# Step 4 — Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### Start Ollama + Llama3
+```bash
+# Start Ollama service
+brew services start ollama
+
+# Run Llama3 model
+ollama run llama3
+```
+
+### Start MLFlow
+MLFlow tracks and compares AI model experiments locally. All data stays on your machine.
+```bash
+# Save MLFlow URI locally (never pushed to GitHub)
+echo http://127.0.0.1:5000/ > .mlflow_uri
+
 # Start MLFlow UI
 mlflow ui
-
-# Open in browser
-http://127.0.0.1:5000
 ```
-All experiment data stays on your machine — nothing is sent to the cloud.
+Open in browser: `http://127.0.0.1:5000`
 
 ---
 
 ## 6. 📊 Current Status
 
-| Component | Version | Status |
-|-----------|---------|--------|
-| Frontend UI | rev02_work | In progress |
-| Frontend Fixes | rev02_001 | Pending |
-| Backend | - | Not started |
-| Vector DB (ChromaDB) | - | Not started |
-| AI Model (Ollama) | - | Not started |
-| Experiment Tracking (MLFlow) | - | Not started |
-| EDA Notebook | - | Not started |
+| Component | Version | Status | Branch |
+|-----------|---------|--------|--------|
+| Frontend UI | rev02_work | ✅ Done | main_sia_03 |
+| Frontend Fixes | rev02_001 | ✅ Done | main_sia_03 |
+| Ollama | 0.17.7 | ✅ Installed | - |
+| Backend | - | 🔜 Next | - |
+| Vector DB (ChromaDB) | - | 🔜 Next | - |
+| Experiment Tracking (MLFlow) | - | 🔜 Next | - |
+| EDA Notebook | - | 🔜 Next | - |
 
 ---
 
