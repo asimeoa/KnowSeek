@@ -38,6 +38,8 @@
 
 ## Week 1 — Repo + Frontend + PM + Environment (10–16.03)
 
+> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+
 ### Completed ✅
 
 - [x] Frontend UI Design finalized (rev02_work) — Lovable exported + tested
@@ -61,32 +63,42 @@
 - [x] RnD_DESCRIPTION.md complete — EVA + OKRs + Master merged
 - [x] Folder cleanup — strategy.md + PROGRESS.md deleted
 - [x] Branch main_sia_03 — rev02_001 active
+- [x] #4 Ask coach: Solo project approval ✅ — approved
+- [x] #3 Solo project approval confirmed
+- [x] #5 Lovable Fix B — NormSeek + CostSeek sidebar icons
+- [x] #6 Lovable Fix 2d — Sidebar icons equal brightness
+- [x] #7 Lovable Fix 3 — Search field inner light ray effect
+- [x] #8 Ollama install and test locally — llama3
+- [x] #9 ChromaDB install and test locally
 
 ### Still open — Week 1
 
-- [ ] 🔴 Ask coach: Solo project approval — before midterm
 - [ ] 🔴 Git commit + push all changes — branch main_sia_03
 - [ ] 🔴 #10 Python virtual environment + requirements.txt
-- [ ] 🔴 #28 Pull nomic-embed-text — `ollama pull nomic-embed-text`
-- [ ] 🔴 #29 Setup ChromaDB — `pip install chromadb`
-- [ ] 🔴 #27 OEM brand names anonymized — frontend + docs
+- [ ] 🔴 #39 Create fictional OEM test documents — OEM-V / OEM-W / OEM-G specs
+- [ ] 🔴 Pull nomic-embed-text — `ollama pull nomic-embed-text`
+- [ ] 🔴 Setup ChromaDB — `pip install chromadb`
 - [ ] 🟡 #15 FastAPI basic endpoints — `GET /api/health` + `POST /api/docseek/query`
 - [ ] 🟡 #12 MLFlow local setup — `http://127.0.0.1:5000`
 - [ ] 🟡 #11 EDA Notebook — load and analyze anonymized documents
-- [ ] 🟡 #30 Setup docker-compose.yml — planned end of Phase 1
 
 ---
 
 ## Week 2 — Integration + Midterm (17–20.03)
 
+> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+
 | Day | Issue | Task | Deliverable |
 |-----|-------|------|-------------|
 | 17.03 | #18 | DocSeek end-to-end working | Query → retrieve → answer → source |
-| 17.03 | #27 | OEM brand names anonymized | OEM-V / OEM-W / OEM-G in frontend + docs |
+| 17.03 | #26 | OEM brand names anonymized | OEM-V / OEM-W / OEM-G in frontend + docs |
 | 17.03 | — | PartSeek basic search working | Text search returns part + metadata |
 | 18.03 | #13 | Baseline BM25 + MLFlow logged | Baseline vs llama3 comparison |
 | 18.03 | #14 | llama3 RAG pipeline results logged | MLFlow experiment complete |
 | 18.03 | #11 | EDA Notebook clean version | Charts, spider diagram, language distribution |
+| 18.03 | 🎯 #29 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
+| 18.03 | 🎯 #31 | Multi language DE/EN working | Test queries in DE + EN — results verified |
+| 18.03 | 🎯 #32 | Zero data leaves machine verified | No external API calls confirmed |
 | 18–19.03 | #19 | **Midterm PPT — build** | See slide structure below |
 | 19.03 | #20 | PPT finalized + rehearsed | 10 min timing |
 | 19.03 | #20 | PPT pushed to GitHub | `04_progress/` |
@@ -111,15 +123,22 @@
 
 ## Week 3 — DocSeek + PartSeek + Technical PPT (21–26.03)
 
+> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+
 | Day | Issue | Task | Deliverable |
 |-----|-------|------|-------------|
 | 21.03 | — | Midterm feedback → prioritize | Updated task list |
 | 21.03 | — | Demo flow defined | Exact 10 min script |
 | 22.03 | #18 | DocSeek full end-to-end with real data | OEM-V vs OEM-W vs OEM-G working |
+| 22.03 | 🎯 #33 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
+| 22.03 | 🎯 #34 | Risk table correct | same / different / conflict verified |
+| 22.03 | 🎯 #35 | Source link clickable on every result | Manual test — every result has source |
 | 22.03 | #16 | Frontend connected to backend | Error handling + loading states |
-| 23.03 | — | PartSeek polished | Team collision warning working |
-| 23.03 | — | Confidence score 🟢🟡🔴 on all results | All modules |
-| 24.03 | #31 | **Technical PPT — build** | See slide structure below |
+| 23.03 | 🎯 #36 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
+| 23.03 | 🎯 #37 | Team collision warning works | Tested with 2 similar part queries |
+| 23.03 | 🎯 #38 | All metadata shown on part result | Material, strength, OEM logo verified |
+| 23.03 | 🎯 #30 | Confidence score 🟢🟡🔴 on all results | Visible on every result card |
+| 24.03 | #27 | **Technical PPT — build** | See slide structure below |
 | 25.03 | — | All code clean + commented | Pytest passing |
 | 25.03 | — | README final version | Setup in 3 commands |
 | 26.03 | #22 | Full dress rehearsal | 10 min timed |
@@ -144,9 +163,11 @@
 
 ## Week 4 — Final Demo + Stakeholder PPT (27.03)
 
+> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+
 | Issue | Task | Deliverable |
 |-------|------|-------------|
-| #32 | **Stakeholder PPT finalized** | See slide structure below |
+| #28 | **Stakeholder PPT finalized** | See slide structure below |
 | #21 | All PPTs pushed to GitHub | `04_progress/` |
 | — | Live demo running | DocSeek + PartSeek on local machine |
 | — | Repo clean | No temp files, all committed |
@@ -197,7 +218,7 @@
 Backlog → In Progress → Review → Done
 ```
 
-Tags: `frontend` `backend` `data` `ppt` `docs` `fix` `security`
+Tags: `frontend` `backend` `data` `ppt` `docs` `fix` `security` `okr`
 
 Milestones:
 - Week 1: Environment + Setup
@@ -206,7 +227,9 @@ Milestones:
 
 ---
 
-## New Issues to Create — Copy & Paste to Terminal
+## New Issues to Create — Copy & Paste to Terminal as example 
+
+### Technical + Setup Issues (#27,#32)
 
 ```bash
 # #27 — OEM Anonymization
@@ -216,33 +239,6 @@ gh issue create \
   --label "security" \
   --milestone "Week 2: Midterm Presentation"
 
-# #28 — nomic-embed-text
-gh issue create \
-  --title "Backend: Pull nomic-embed-text via Ollama" \
-  --body "Run: ollama pull nomic-embed-text. Verify DE + EN embedding works. Required before ChromaDB setup." \
-  --label "backend" \
-  --milestone "Week 1: Environment + Setup"
-
-# #29 — ChromaDB
-gh issue create \
-  --title "Backend: Setup ChromaDB — install + first index test" \
-  --body "pip install chromadb. Create first collection. Index 2-3 test PDFs. Verify similarity search returns results." \
-  --label "backend" \
-  --milestone "Week 1: Environment + Setup"
-
-# #30 — docker-compose.yml
-gh issue create \
-  --title "Infrastructure: Setup docker-compose.yml" \
-  --body "Create docker-compose.yml for Ollama + ChromaDB + FastAPI + MLFlow. One command starts everything. Planned end of Phase 1." \
-  --label "backend" \
-  --milestone "Week 1: Environment + Setup"
-
-# #31 — Technical PPT
-gh issue create \
-  --title "Docs: Technical PPT — RAG pipeline + architecture + MLFlow" \
-  --body "10 slides: RAG pipeline, embedding evaluation, chunking strategy, ChromaDB, MLFlow results, architecture, code structure, limitations, roadmap." \
-  --label "documentation" \
-  --milestone "Week 3 + 4: Final Demo"
 
 # #32 — Stakeholder PPT
 gh issue create \
@@ -252,7 +248,64 @@ gh issue create \
   --milestone "Week 3 + 4: Final Demo"
 ```
 
+### OKR Issues (#33,#42)
+
+```bash
+# #33 — OKR Overall KR1
+gh issue create \
+  --title "OKR: Answer time measured + visualized — KR1 Overall" \
+  --body "Measure answer time baseline vs RAG. Show as bar chart in EDA.ipynb. Proves system performance without being hardware dependent." \
+  --label "okr" \
+  --milestone "Week 2: Midterm Presentation"
+
+
+
+# #42 — OKR PartSeek KR3
+gh issue create \
+  --title "OKR: All metadata shown on part result — KR3 PartSeek" \
+  --body "Every part result shows: material, surface treatment, strength class, force values, OEM logo, part number, drawing link." \
+  --label "okr" \
+  --milestone "Week 3 + 4: Final Demo"
+```
+
+---
+
+## GitHub CLI — Useful Commands
+
+```bash
+# Show all issues with status + labels
+gh issue list --limit 50 --state all --json number,title,state,labels | python3 -c "
+import json,sys
+issues = json.load(sys.stdin)
+for i in issues:
+    labels = [l['name'] for l in i['labels']]
+    print(f\"#{i['number']:3} {i['state']:6} {', '.join(labels):15} {i['title'][:50]}\")
+"
+
+# Show all milestones
+gh api repos/asimeoa/KnowSeek/milestones | grep '"title"'
+
+# Close an issue
+gh issue close <number>
+
+# Create a label
+gh label create "labelname" --color "#HEX" --description "description"
+
+# Create an issue
+gh issue create \
+  --title "Title" \
+  --body "Description" \
+  --label "labelname" \
+  --milestone "Milestone Title Exact"
+
+# Add label to existing issue
+gh issue edit <number> --add-label "labelname"
+
+# Remove label from existing issue
+gh issue edit <number> --remove-label "labelname"
+```
+
 ---
 
 *Save in: `04_progress/sprint_logs/SPRINT_PLAN_rev03.md`*
-*Version: rev03 — Last updated: 11.03.2026 — Branch: main_sia_03*
+*Version: rev03 — Last updated: 12.03.2026 — Branch: main_sia_03*
