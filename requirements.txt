@@ -1,18 +1,60 @@
-#Standard-Tools for RAG-System (Retrieval Augmented Generation)
-# AI & LLM Frameworks
-langchain
-openai
-sentence-transformers
+# KnowSeek.ai — Python Dependencies
+# Version: rev02_001 — Last updated: 12.03.2026
+# Branch: main
+#
+# Note: Ollama is used for TWO functions:
+#   1. LLM — llama3:8b — answer generation
+#   2. Embedding — nomic-embed-text — text vectorization (DE + EN)
+#   Install: brew install ollama
+#   Models:  ollama pull llama3
+#            ollama pull nomic-embed-text
 
-# Vector Database & Data Handling
-numpy
-pandas
+# ─────────────────────────────────────────────
+# AI & RAG Framework
+# ─────────────────────────────────────────────
+langchain
+langchain-community          # PDF / DOCX / XLSX loaders
+langchain-ollama             # Ollama LLM + Embedding integration
+
+# ─────────────────────────────────────────────
+# Vector Database
+# ─────────────────────────────────────────────
 chromadb
 
-# API & Web Server (für das Backend)
+# ─────────────────────────────────────────────
+# Document Processing
+# ─────────────────────────────────────────────
+pdfplumber                   # Digital PDF text + table extraction
+pymupdf                      # PDF image extraction + metadata (fitz)
+pytesseract                  # OCR for scanned PDFs
+python-docx                  # DOCX parsing
+openpyxl                     # XLSX parsing
+
+# ─────────────────────────────────────────────
+# Baseline Model
+# ─────────────────────────────────────────────
+rank-bm25                    # BM25 keyword search — baseline for MLFlow comparison
+# ─────────────────────────────────────────────
+# API & Web Server
+# ─────────────────────────────────────────────
 fastapi
 uvicorn
 
-# Document Processing
-pypdf
-python-docx
+# ─────────────────────────────────────────────
+# Data Analysis & EDA
+# ─────────────────────────────────────────────
+numpy
+pandas
+matplotlib
+seaborn                      # Statistical charts, heatmaps
+plotly                       # Interactive charts, spider diagram
+
+# ─────────────────────────────────────────────
+# Experiment Tracking
+# ─────────────────────────────────────────────
+mlflow                       # Local experiment tracking (port 5000)
+
+# ─────────────────────────────────────────────
+# Testing
+# ─────────────────────────────────────────────
+pytest

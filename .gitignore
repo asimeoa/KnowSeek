@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# KnowSeek.ai — Local files, not for version control
+.venv/
+mlflow.db
+.mlflow_uri
+mlruns/
+
+# Data & Documents — IP protection
+05_data/
+*.pdf
