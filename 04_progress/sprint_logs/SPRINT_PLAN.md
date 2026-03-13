@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev03 — Last updated: 11.03.2026 — Branch: main_sia_03**
+**Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -22,7 +22,7 @@
 - [ ] All work stored in GitHub repo
 - [ ] Final presentation slides in GitHub repo
 - [ ] 10 min presentation ready
-- [ ] Solo approval confirmed by coach ⚠️
+- [x] Solo approval confirmed by coach 
 
 ---
 
@@ -73,13 +73,13 @@
 
 ### Still open — Week 1
 
-- [ ] 🔴 Git commit + push all changes — branch main_sia_03
-- [ ] 🔴 #10 Python virtual environment + requirements.txt
-- [ ] 🔴 #39 Create fictional OEM test documents — OEM-V / OEM-W / OEM-G specs
-- [ ] 🔴 Pull nomic-embed-text — `ollama pull nomic-embed-text`
-- [ ] 🔴 Setup ChromaDB — `pip install chromadb`
+- [x] Git commit + push all changes — branch main_sia_04
+- [x] #10 Python virtual environment + requirements.txt ✅
+- [x] Setup ChromaDB — chromadb 1.5.5 installed ✅
+- [x] #39 Anonymized OEM test data loaded — 01_Fasteners / 02_Specifikation / 03_Painting ✅
+- [x] Pull nomic-embed-text — nomic-embed-text 274MB installed ✅
+- [x] #12 MLFlow local setup — running on http://127.0.0.1:5000 ✅
 - [ ] 🟡 #15 FastAPI basic endpoints — `GET /api/health` + `POST /api/docseek/query`
-- [ ] 🟡 #12 MLFlow local setup — `http://127.0.0.1:5000`
 - [ ] 🟡 #11 EDA Notebook — load and analyze anonymized documents
 
 ---
@@ -96,9 +96,9 @@
 | 18.03 | #13 | Baseline BM25 + MLFlow logged | Baseline vs llama3 comparison |
 | 18.03 | #14 | llama3 RAG pipeline results logged | MLFlow experiment complete |
 | 18.03 | #11 | EDA Notebook clean version | Charts, spider diagram, language distribution |
-| 18.03 | 🎯 #29 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
-| 18.03 | 🎯 #31 | Multi language DE/EN working | Test queries in DE + EN — results verified |
-| 18.03 | 🎯 #32 | Zero data leaves machine verified | No external API calls confirmed |
+| 18.03 | #29 🎯| Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
+| 18.03 |  #31 🎯 | Multi language DE/EN working | Test queries in DE + EN — results verified |
+| 18.03 | #32 🎯 | Zero data leaves machine verified | No external API calls confirmed |
 | 18–19.03 | #19 | **Midterm PPT — build** | See slide structure below |
 | 19.03 | #20 | PPT finalized + rehearsed | 10 min timing |
 | 19.03 | #20 | PPT pushed to GitHub | `04_progress/` |
@@ -130,14 +130,14 @@
 | 21.03 | — | Midterm feedback → prioritize | Updated task list |
 | 21.03 | — | Demo flow defined | Exact 10 min script |
 | 22.03 | #18 | DocSeek full end-to-end with real data | OEM-V vs OEM-W vs OEM-G working |
-| 22.03 | 🎯 #33 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
-| 22.03 | 🎯 #34 | Risk table correct | same / different / conflict verified |
-| 22.03 | 🎯 #35 | Source link clickable on every result | Manual test — every result has source |
+| 22.03 | #33 🎯 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
+| 22.03 | #34 🎯 | Risk table correct | same / different / conflict verified |
+| 22.03 | #35 🎯 | Source link clickable on every result | Manual test — every result has source |
 | 22.03 | #16 | Frontend connected to backend | Error handling + loading states |
-| 23.03 | 🎯 #36 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
-| 23.03 | 🎯 #37 | Team collision warning works | Tested with 2 similar part queries |
-| 23.03 | 🎯 #38 | All metadata shown on part result | Material, strength, OEM logo verified |
-| 23.03 | 🎯 #30 | Confidence score 🟢🟡🔴 on all results | Visible on every result card |
+| 23.03 | #36 🎯 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
+| 23.03 | #37 🎯 | Team collision warning works | Tested with 2 similar part queries |
+| 23.03 | #38 🎯 | All metadata shown on part result | Material, strength, OEM logo verified |
+| 23.03 | #30 🎯 | Confidence score 🟢🟡🔴 on all results | Visible on every result card |
 | 24.03 | #27 | **Technical PPT — build** | See slide structure below |
 | 25.03 | — | All code clean + commented | Pytest passing |
 | 25.03 | — | README final version | Setup in 3 commands |
@@ -199,11 +199,13 @@
 | SearchBlock.tsx | rev02_001 | ✅ Glow correct |
 | index.css | rev02_001 | ✅ Pulse animations correct |
 | Ollama + llama3 | 0.17.7 | ✅ Running |
-| nomic-embed-text | — | 🔜 Pull needed |
-| ChromaDB | — | 🔜 Next |
+| nomic-embed-text | 274MB | ✅ Installed |
+| ChromaDB | 1.5.5 | ✅ Installed |
+| rank-bm25 | 0.2.2 | ✅ Installed |
+| MLFlow | 3.10.1 | ✅ Running — port 5000 |
+| 05_data | — | ✅ Anonymized data loaded |
 | FastAPI | — | 🔜 Next |
-| MLFlow | — | 🔜 Next |
-| EDA Notebook | — | 🔜 Week 1 remaining |
+| EDA Notebook | — | 🔜 Next |
 | Midterm PPT | — | 🔜 Week 2 |
 | Technical PPT | — | 🔜 Week 3 |
 | Stakeholder PPT | — | 🔜 Week 4 |
@@ -227,9 +229,10 @@ Milestones:
 
 ---
 
-## New Issues to Create — Copy & Paste to Terminal as example 
 
-### Technical + Setup Issues (#27,#32)
+## New Issues to Create — Copy & Paste to Terminal as example #27 how to do this  
+
+### Technical + Setup Issues (#27)
 
 ```bash
 # #27 — OEM Anonymization
@@ -238,37 +241,6 @@ gh issue create \
   --body "Replace real OEM names with OEM-V / OEM-W / OEM-G in DocSeekView.tsx and RnD_DESCRIPTION.md. PDF filenames also anonymized." \
   --label "security" \
   --milestone "Week 2: Midterm Presentation"
-
-
-# #32 — Stakeholder PPT
-gh issue create \
-  --title "Docs: Stakeholder PPT — business case + live demo" \
-  --body "10 slides: problem, target users, solution, live demo DocSeek + PartSeek, trust signal, data privacy, OKR results, roadmap." \
-  --label "documentation" \
-  --milestone "Week 3 + 4: Final Demo"
-```
-
-### OKR Issues (#33,#42)
-
-```bash
-# #33 — OKR Overall KR1
-gh issue create \
-  --title "OKR: Answer time measured + visualized — KR1 Overall" \
-  --body "Measure answer time baseline vs RAG. Show as bar chart in EDA.ipynb. Proves system performance without being hardware dependent." \
-  --label "okr" \
-  --milestone "Week 2: Midterm Presentation"
-
-
-
-# #42 — OKR PartSeek KR3
-gh issue create \
-  --title "OKR: All metadata shown on part result — KR3 PartSeek" \
-  --body "Every part result shows: material, surface treatment, strength class, force values, OEM logo, part number, drawing link." \
-  --label "okr" \
-  --milestone "Week 3 + 4: Final Demo"
-```
-
----
 
 ## GitHub CLI — Useful Commands
 
@@ -291,12 +263,12 @@ gh issue close <number>
 # Create a label
 gh label create "labelname" --color "#HEX" --description "description"
 
-# Create an issue
+# Create an issue — example
 gh issue create \
   --title "Title" \
   --body "Description" \
-  --label "labelname" \
-  --milestone "Milestone Title Exact"
+  --label "okr" \
+  --milestone "Week 2 : Midterm Presentation Due: 20.03.2026"
 
 # Add label to existing issue
 gh issue edit <number> --add-label "labelname"
@@ -307,5 +279,5 @@ gh issue edit <number> --remove-label "labelname"
 
 ---
 
-*Save in: `04_progress/sprint_logs/SPRINT_PLAN_rev03.md`*
-*Version: rev03 — Last updated: 12.03.2026 — Branch: main_sia_03*
+*Save in: `04_progress/sprint_logs/SPRINT_PLAN.md`*
+*Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04*

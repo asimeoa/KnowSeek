@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev02_001 — Last updated: 11.03.2026 — Branch: main_sia_03*
+*Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04*
 
 > All data stays local. No cloud. No internet required.
 
@@ -16,7 +16,8 @@
 | 03 | **NormSeek.ai** | Indigo #9199F4 | ⏳ Phase 2 |
 | 04 | **CostSeek.ai** | Orange #FC9D57 | ⏳ Phase 2 |
 
-**Midterm: 20.03.2026 · Final: 27.03.2026 · Solo developer · On-Premise / Ollama**
+**Midterm: 20.03.2026 · Dry Run: 27.03.2026 · Stakeholder: 02.04.2026**
+**Solo developer · On-Premise / Ollama**
 
 ---
 
@@ -66,12 +67,14 @@ KnowSeek.ai solves this directly.
 > local, private, with source included, and a clear trust signal
 > 🟢🟡🔴 they can see at a glance."
 
+![OKR Structure](pictures/okr_diagram.svg)
+
 ### Key Results — MVP Overall
 
 | # | Key Result | How We Measure It |
 |---|------------|------------------|
 | KR1 | Answer time measured + visualized | Baseline vs RAG — bar chart in EDA.ipynb |
-| KR2 | Zero data leaves the local machine | No external API calls — verified in network monitor |
+| KR2 | System runs 100% offline — verified | No external API calls during query — network monitor check |
 | KR3 | Works in multi language (DE, EN) | Test queries in both languages — results verified |
 | KR4 | Confidence score 🟢🟡🔴 shown on every result | Visible on every result card in frontend |
 
@@ -115,6 +118,16 @@ This means the AI does not guess — it reads your actual documents and tells yo
 | 60–85% | 🟡 Yellow | Partial match — check the source |
 | < 60% | 🔴 Red | Low confidence — verify manually |
 
+**FastAPI connects the AI backend to the React frontend:**
+
+```
+React Frontend  →  FastAPI  →  LangChain → ChromaDB → llama3
+(JavaScript)       (Python)
+
+POST /api/docseek/query  ←  question
+GET  /api/health         ←  server status check
+```
+
 ---
 
 ## 6. Tech Stack — MVP
@@ -125,6 +138,7 @@ This means the AI does not guess — it reads your actual documents and tells yo
 |-----------|-----------|-----|
 | LLM | llama3:8b via Ollama | 100% offline, runs well on Mac M1 |
 | Embedding model | nomic-embed-text via Ollama | Full DE + EN support, no extra package |
+| Baseline model | rank-bm25 | Keyword search — baseline for MLFlow comparison |
 | Vector database | ChromaDB | Simple, local, persistent, no server needed |
 | RAG framework | LangChain | PDF/DOCX/XLSX loaders + memory + multi-query |
 | Backend API | FastAPI (Python 3.11.3) | REST API between AI logic and frontend |
@@ -133,6 +147,12 @@ This means the AI does not guess — it reads your actual documents and tells yo
 | Experiment tracking | MLFlow (local, port 5000) | Track and compare model experiments |
 | Infrastructure | Docker Compose *(planned)* | One command starts everything |
 | Dev machine | Mac M1 16GB | Unified memory — Ollama runs fast |
+
+### Ollama — Two Functions
+
+> Ollama is used for TWO functions in KnowSeek.ai:
+> 1. **LLM** — `llama3:8b` — generates answers
+> 2. **Embedding** — `nomic-embed-text` — converts text to vectors (DE + EN)
 
 ### Embedding Model — Why We Chose nomic-embed-text
 
@@ -188,7 +208,13 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 
 ---
 
-## 8. EVA — Input / Processing / Output
+## 8. EVA — **I**nput / **P**rocessing / **O**utput
+
+| Symbol | German | English |
+|--------|--------|---------|
+| E | Eingabe | Input |
+| V | Verarbeitung | Processing |
+| A | Ausgabe | Output |
 
 This section documents every tool evaluated — with reliability rating and decision.
 
@@ -283,11 +309,12 @@ This section documents every tool evaluated — with reliability rating and deci
 |------|--------|----------|-------|
 | **LangChain** | 🟢 | ✅ Selected | Loaders + Memory + Multi-Query |
 
-#### V5. LLM
+#### V5. LLM + Baseline
 
 | Model | Size | 🟢🟡🔴 | Decision |
 |-------|------|--------|----------|
-| **llama3:8b (Ollama)** | 4.7GB | 🟢 | ✅ Selected |
+| **llama3:8b (Ollama)** | 4.7GB | 🟢 | ✅ Selected — main model |
+| **rank-bm25** | — | 🟢 | ✅ Baseline — keyword search for MLFlow comparison |
 | LLaVA (Ollama)* | 4.5GB | 🔴 | Phase 2 — vision model |
 
 #### V6. Experiment Tracking
@@ -297,9 +324,9 @@ This section documents every tool evaluated — with reliability rating and deci
 | **MLFlow (local)** | 🟢 | ✅ Selected | Tracks embedding + chunking experiments |
 
 **MLFlow Experiments planned:**
+- BM25 baseline vs RAG + llama3 comparison
 - Embedding model comparison (retrieval quality score)
 - Chunking strategy comparison (chunk size vs accuracy)
-- LLM response quality per document type
 
 #### V7. Memory & Conversation
 
@@ -313,11 +340,11 @@ This section documents every tool evaluated — with reliability rating and deci
 
 | Service | Port | 🟢🟡🔴 | Notes |
 |---------|------|--------|-------|
-| Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Installed |
-| ChromaDB | 8000 | 🔜 | Setup next |
-| FastAPI Backend | 8001 | 🔜 | Setup next |
+| Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Running |
+| ChromaDB | 8000 | 🟢 | ✅ Installed |
+| FastAPI Backend | 8001 | 🔜 | Next |
 | React Frontend | 3000 | 🟢 | ✅ Running (dev: 8081) |
-| MLFlow UI | 5000 | 🔜 | Setup next |
+| MLFlow UI | 5000 | 🟢 | ✅ Running |
 | Docker Compose | — | 🔴 | Planned — end of Phase 1 |
 
 **Resource Management (Mac M1 16GB):**
@@ -450,7 +477,7 @@ User types question
         ↓
 React Frontend
         ↓
-FastAPI Backend
+FastAPI Backend (port 8001)
         ↓
 LangChain → ChromaDB (finds relevant chunks)
         ↓
@@ -463,7 +490,45 @@ User sees answer + traffic light + clickable source
 
 ---
 
-## 12. Repository Structure
+## 12. Metadata Schema
+
+Every document chunk stored in ChromaDB has metadata attached.
+This prevents hallucination — llama3 can only answer based on verified source chunks.
+
+### Base Schema — All Documents
+
+```python
+metadata = {
+    "source_id":    "#74",
+    "filename":     "OEM-V_SPEC_001.pdf",
+    "page":         14,
+    "date":         "20260313",
+    "category":     "Corrosion",        # Corrosion / Bolts+Torque / Dimensions / Material
+    "doc_type":     "Lastenheft",       # Lastenheft / Datasheet / Standard / Drawing
+    "language":     "DE",               # DE / EN / DE+EN
+    "oem_code":     "OEM-V",            # OEM-V / OEM-W / OEM-G
+    "verified":     True,
+    "chunk_index":  3,
+}
+```
+
+### Drawing Warning — Anti-Hallucination
+
+```python
+metadata = {
+    ...
+    "geometry":  False,
+    "text_only": True,
+    "warning":   "Geometry not extractable — text fields only."
+}
+```
+
+> This warning is passed to llama3 in the prompt.
+> Prevents hallucination on dimensional queries.
+
+---
+
+## 13. Repository Structure
 
 ```
 KnowSeek/
@@ -487,11 +552,16 @@ KnowSeek/
 │   └── 05_frontend_manifest.md
 ├── 03_docs/
 │   ├── discovery/
+│   ├── pictures/               ← Diagrams + visuals
+│   │   └── okr_diagram.svg
 │   └── RnD_DESCRIPTION.md     ← This file
 ├── 04_progress/
 │   └── sprint_logs/
-│       └── SPRINT_PLAN_rev03.md
-├── 05_data/
+│       └── SPRINT_PLAN_rev04.md
+├── 05_data/                    ← Local only — never pushed to GitHub
+│   ├── 01_Fasteners/
+│   ├── 02_Specifikation/
+│   └── 03_Painting/
 ├── 06_notebooks/
 │   ├── EDA.ipynb
 │   └── knowseek_prototype.ipynb
@@ -504,34 +574,38 @@ KnowSeek/
 
 ---
 
-## 13. Sprint Plan
+## 14. Sprint Plan Overview
 
 | Week | Dates | Goal | Key Deliverable |
 |------|-------|------|-----------------|
-| Week 1 | 10–16.03 | Repo + Frontend + PM + Environment | See details below |
-| Week 2 | 17–20.03 | Midterm ready | EDA done, MLFlow comparison, Midterm PPT ready |
-| Week 3 | 21–26.03 | DocSeek + PartSeek + Technical PPT | Full RAG pipeline, frontend connected, technical PPT ready |
-| Week 4 | 27.03 | Final demo + Stakeholder PPT | Live demo, repo clean, stakeholder PPT, 10 min presentation |
+| Week 1 | 10–16.03 | Repo + Frontend + PM + Environment | ✅ Done |
+| Week 2 | 17–20.03 | Midterm ready | EDA + MLFlow comparison + Midterm PPT |
+| Week 3 | 21–26.03 | DocSeek + PartSeek + Technical PPT | Full RAG pipeline + frontend connected |
+| Week 4 | 27.03 | Dry Run + Stakeholder PPT | Live demo + repo clean |
+| Final | 02.04 | Stakeholder Presentation | Final delivery |
 
-### Week 1 — Details (10–16.03)
+### Week 1 — Status (10–16.03)
 
-| Area | Done | Notes |
-|------|------|-------|
-| GitHub repo setup | ✅ | main + branches created |
-| Folder structure | ✅ | 01–06 folders clean |
+| Area | Status | Notes |
+|------|--------|-------|
+| GitHub repo + folder structure | ✅ | 01–06 folders clean |
 | Frontend (Lovable) | ✅ | React UI running on port 8081 |
-| Frontend fixes | ✅ | Glow, icons, pulse animations — branch main_sia_03 |
-| Kanban board | ✅ | GitHub Projects — 20 issues, 3 milestones |
-| README | ✅ | venv setup, Ollama, MLFlow URI |
-| RnD_DESCRIPTION.md | ✅ | EVA + OKRs + Master merged |
-| Ollama installed | ✅ | v0.17.7 — llama3 downloaded |
-| Python env | 🔜 | venv + requirements.txt next |
-| ChromaDB setup | 🔜 | Next step |
-| FastAPI first endpoint | 🔜 | Next step |
+| Frontend fixes | ✅ | Glow, icons, pulse animations |
+| Kanban board | ✅ | GitHub Projects — 39 issues, 3 milestones |
+| RnD_DESCRIPTION.md | ✅ | EVA + OKRs + Metadata Schema |
+| Ollama + llama3 | ✅ | v0.17.7 — 4.7GB |
+| nomic-embed-text | ✅ | 274MB — via Ollama |
+| Python venv + requirements.txt | ✅ | Python 3.11.3 |
+| ChromaDB | ✅ | v1.5.5 installed |
+| rank-bm25 | ✅ | v0.2.2 installed |
+| MLFlow | ✅ | Running on port 5000 |
+| Anonymized test data | ✅ | 01_Fasteners / 02_Specifikation / 03_Painting |
+| FastAPI first endpoint | 🔜 | Next |
+| EDA Notebook | 🔜 | Next |
 
 ---
 
-## 14. Known Limitations
+## 15. Known Limitations
 
 | Limitation | Impact | Workaround | When Fixed |
 |------------|--------|------------|------------|
@@ -545,7 +619,7 @@ KnowSeek/
 
 ---
 
-## 15. Roadmap
+## 16. Roadmap
 
 ### Phase 2 (after Capstone)
 
@@ -570,7 +644,7 @@ KnowSeek/
 
 ---
 
-## 16. UI Design Principles
+## 17. UI Design Principles
 
 - **The Infinite Book** — navigation feels like turning pages
 - **Spring Physics** — all transitions have weight and momentum
@@ -582,4 +656,4 @@ KnowSeek/
 ---
 
 *This document is the single source of truth for all KnowSeek.ai development.*
-*Version: rev02_001 — Last updated: 11.03.2026 — Branch: main_sia_03*
+*Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04*
