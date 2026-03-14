@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04*
+*Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05*
 
 > All data stays local. No cloud. No internet required.
 
@@ -75,8 +75,8 @@ KnowSeek.ai solves this directly.
 |---|------------|------------------|
 | KR1 | Answer time measured + visualized | Baseline vs RAG — bar chart in EDA.ipynb |
 | KR2 | System runs 100% offline — verified | No external API calls during query — network monitor check |
-| KR3 | Works in multi language (DE, EN) | Test queries in both languages — results verified |
-| KR4 | Confidence score 🟢🟡🔴 shown on every result | Visible on every result card in frontend |
+| KR3 | Works in multi language (DE, EN) | Test queries in both languages — results verified ✅ |
+| KR4 | Confidence score 🟢🟡🔴 shown on every result | Visible on every result card in frontend ✅ |
 
 ### Key Results — DocSeek.ai
 
@@ -176,7 +176,7 @@ We evaluated 5 models before deciding:
 | Model | Type | Decision | Notes |
 |-------|------|----------|-------|
 | LLaVA (Ollama) | Vision LLM — describes images in text | 🟡 Try for 27.03 | No training needed, slower |
-| YOLO (Ultralytics) | Object detection — finds + classifies parts | 🔴 Phase 2 | Needs ~500 labeled images, training ~2h |
+| YOLO (Ultralytics) | Object detection — finds + classifies parts | 🔴 Phase 2 | Needs ~500 labeled images, training ~5h |
 
 > YOLO requires training data (~500 labeled images per class).
 > Dataset source: Roboflow Universe — pre-labeled fastener datasets available.
@@ -200,14 +200,13 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 ```
 01_backend/modules/
 ├── 02_docseek/
-│   ├── ingest.py       ← load documents, chunk, store in ChromaDB
-│   ├── embed.py        ← convert text to vectors via nomic-embed-text
-│   ├── search.py       ← find relevant chunks in ChromaDB
-│   └── answer.py       ← send chunks to llama3, return answer + source
+│   ├── ingest.py       ← load documents, chunk, store in ChromaDB ✅
+│   ├── search.py       ← find relevant chunks in ChromaDB ✅
+│   └── answer.py       ← send chunks to llama3, return answer + source ✅
 ├── 01_partseek/
-│   ├── ingest.py
-│   ├── search.py
-│   └── answer.py
+│   ├── ingest.py       ← Phase 2
+│   ├── search.py       ← Phase 2
+│   └── answer.py       ← Phase 2
 
 06_notebooks/
 ├── EDA.ipynb           ← calls .py files, shows results + charts
@@ -275,7 +274,7 @@ This section documents every tool evaluated — with reliability rating and deci
 
 | Input Type | Module | 🟢🟡🔴 | Notes |
 |------------|--------|--------|-------|
-| Free text query (DE/EN) | DocSeek + PartSeek | 🟢 | Core feature |
+| Free text query (DE/EN) | DocSeek + PartSeek | 🟢 | Core feature — verified ✅ |
 | Follow-up questions | DocSeek | 🟢 | Last 5 queries remembered |
 | Multi-document comparison | DocSeek | 🟢 | Multi-Query Retrieval (LangChain) |
 | Image upload (photo of part) | PartSeek | 🔴 | Phase 2 — LLaVA |
@@ -352,8 +351,8 @@ This section documents every tool evaluated — with reliability rating and deci
 | Service | Port | 🟢🟡🔴 | Notes |
 |---------|------|--------|-------|
 | Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Running |
-| ChromaDB | 8000 | 🟢 | ✅ Installed |
-| FastAPI Backend | 8001 | 🔜 | Next |
+| ChromaDB | 8000 | 🟢 | ✅ Installed + tested |
+| FastAPI Backend | 8001 | 🔜 | Next — Week 2 |
 | React Frontend | 3000 | 🟢 | ✅ Running (dev: 8081) |
 | MLFlow UI | 5000 | 🟢 | ✅ Running |
 | Docker Compose | — | 🔴 | Planned — end of Phase 1 |
@@ -380,7 +379,7 @@ docker compose stop    # stop everything
 | Framer Motion | 🟢 | ✅ Selected | Spring physics animations |
 | shadcn/ui | 🟢 | ✅ Selected | Component library |
 | Lovable.ai | 🟢 | ✅ Used | AI UI generator — code now in repo |
-| FastAPI | 🟢 | ✅ Selected | REST API |
+| FastAPI | 🟢 | ✅ Selected | REST API — next step |
 | Git + GitHub + gh CLI | 🟢 | ✅ Selected | Version control + automation |
 | Pytest | 🟢 | ✅ Selected | Backend testing |
 | three.js + jt-js* | 🔴 | Phase 2 | 3D viewer |
@@ -393,8 +392,8 @@ docker compose stop    # stop everything
 
 | Feature | 🟢🟡🔴 | Notes |
 |---------|--------|-------|
-| Answer + source link + highlight | 🟢 | Core feature — clickable |
-| Confidence score 🟢🟡🔴 | 🟢 | ChromaDB similarity score |
+| Answer + source link + highlight | 🟢 | Core feature — working ✅ |
+| Confidence score 🟢🟡🔴 | 🟢 | ChromaDB similarity score — working ✅ |
 | Risk table (same / different / conflict) | 🟢 | Prompt engineering |
 | Warning for unsupported file types | 🟢 | Always shown |
 | Document not found warning | 🟢 | When no match exists |
@@ -403,7 +402,7 @@ docker compose stop    # stop everything
 
 | Feature | 🟢🟡🔴 | Notes |
 |---------|--------|-------|
-| Compare across all docs | 🟢 | OEM-V vs OEM-W vs OEM-G |
+| Compare across all docs | 🟢 | OEM comparison working ✅ |
 | Follow-up questions | 🟢 | Context remembered |
 | Query history dropdown | 🟢 | Stored in frontend |
 | Summary + table of contents | 🟢 | LLM structured output |
@@ -514,10 +513,10 @@ metadata = {
     "source_id":    "#74",
     "filename":     "OEM-V_SPEC_001.pdf",
     "page":         14,
-    "date":         "20260313",
+    "date":         "20260314",
     "category":     "Corrosion",        # Corrosion / Bolts+Torque / Dimensions / Material
     "doc_type":     "Lastenheft",       # Lastenheft / Datasheet / Standard / Drawing
-    "language":     "DE",               # DE / EN / DE+EN
+    "language":     "EN",               # DE / EN / DE+EN
     "oem_code":     "OEM-V",            # OEM-V / OEM-W / OEM-G
     "verified":     True,
     "chunk_index":  3,
@@ -546,15 +545,11 @@ metadata = {
 KnowSeek/
 ├── 01_backend/
 │   ├── modules/
-│   │   ├── 01_partseek/
-│   │   │   ├── ingest.py
-│   │   │   ├── search.py
-│   │   │   └── answer.py
+│   │   ├── 01_partseek/        ← Phase 2
 │   │   ├── 02_docseek/
-│   │   │   ├── ingest.py
-│   │   │   ├── embed.py
-│   │   │   ├── search.py
-│   │   │   └── answer.py
+│   │   │   ├── ingest.py       ✅ done
+│   │   │   ├── search.py       ✅ done
+│   │   │   └── answer.py       ✅ done
 │   │   ├── 03_normseek/        ← Phase 2
 │   │   └── 04_costseek/        ← Phase 3
 │   └── main.py
@@ -564,19 +559,19 @@ KnowSeek/
 │   └── 05_frontend_manifest.md
 ├── 03_docs/
 │   ├── discovery/
-│   ├── pictures/               ← Diagrams + visuals
+│   ├── pictures/
 │   │   └── okr_diagram.svg
 │   └── RnD_DESCRIPTION.md     ← This file
 ├── 04_progress/
 │   └── sprint_logs/
-│       └── SPRINT_PLAN_rev04.md
+│       └── SPRINT_PLAN.md      ← rev05_001
 ├── 05_data/                    ← Local only — never pushed to GitHub
 │   ├── 01_Fasteners/
 │   ├── 02_Specifikation/
 │   └── 03_Painting/
 ├── 06_notebooks/
-│   ├── EDA.ipynb
-│   └── knowseek_prototype.ipynb
+│   └── EDA.ipynb
+├── build_ppt.py                ← PPT builder
 ├── docker-compose.yml          ← Planned
 ├── .gitignore
 ├── LICENSE
@@ -608,12 +603,16 @@ KnowSeek/
 | Ollama + llama3 | ✅ | v0.17.7 — 4.7GB |
 | nomic-embed-text | ✅ | 274MB — via Ollama |
 | Python venv + requirements.txt | ✅ | Python 3.11.3 |
-| ChromaDB | ✅ | v1.5.5 installed |
+| ChromaDB | ✅ | v1.5.5 installed + tested |
 | rank-bm25 | ✅ | v0.2.2 installed |
 | MLFlow | ✅ | Running on port 5000 |
 | Anonymized test data | ✅ | 01_Fasteners / 02_Specifikation / 03_Painting |
-| FastAPI first endpoint | 🔜 | Next |
-| EDA Notebook | 🔜 | Next |
+| ingest.py (DocSeek) | ✅ | 7 PDFs loaded — 47 chunks in ChromaDB |
+| search.py (DocSeek) | ✅ | Similarity search + confidence score working |
+| answer.py (DocSeek) | ✅ | RAG pipeline + OEM comparison working |
+| DE + EN verified | ✅ | German + English queries tested |
+| FastAPI first endpoint | 🔜 | Week 2 |
+| EDA Notebook | 🔜 | Week 2 |
 
 ---
 
@@ -668,4 +667,4 @@ KnowSeek/
 ---
 
 *This document is the single source of truth for all KnowSeek.ai development.*
-*Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04*
+*Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05*
