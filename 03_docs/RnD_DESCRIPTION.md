@@ -171,6 +171,17 @@ We evaluated 5 models before deciding:
 - Runs via Ollama — already installed, no extra package
 - One command: `ollama pull nomic-embed-text`
 
+### Image Recognition Model — Evaluated
+
+| Model | Type | Decision | Notes |
+|-------|------|----------|-------|
+| LLaVA (Ollama) | Vision LLM — describes images in text | 🟡 Try for 27.03 | No training needed, slower |
+| YOLO (Ultralytics) | Object detection — finds + classifies parts | 🔴 Phase 2 | Needs ~500 labeled images, training ~2h |
+
+> YOLO requires training data (~500 labeled images per class).
+> Dataset source: Roboflow Universe — pre-labeled fastener datasets available.
+> If time allows before 27.03 — LLaVA will be tested first as no training is needed.
+
 ### Visualization Tools (Notebooks)
 
 | Tool | Purpose |
@@ -458,7 +469,8 @@ A table with requirement, OEM, value, and status (🟢 same / ❌ different / �
 |-------|--------|-------|
 | Text description | 🟢 | Semantic search via ChromaDB |
 | Search by properties | 🟢 | Material, strength, force values |
-| Image upload | 🔴 | Phase 2 — LLaVA |
+| Image upload — LLaVA | 🟡 | Try for 27.03 — no training needed |
+| Image upload — YOLO | 🔴 | Phase 2 — needs ~500 labeled images |
 
 ### 10.2 Team Collision Feature
 

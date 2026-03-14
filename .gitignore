@@ -215,3 +215,5 @@ mlruns/
 # Data & Documents — IP protection
 05_data/
 *.pdf
+.DS_Store
+**/.DS_Store

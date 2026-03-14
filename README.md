@@ -1,7 +1,7 @@
 # KnowSeek.Ai 🧠
 > **Stop searching. Start knowing.**
 
-**Version: rev02_001 — Last updated: 11.03.2026 — Branch: main_sia_03**
+**Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04**
 
 KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
@@ -13,7 +13,7 @@ KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. 
 Ask any question about your technical documents and get an instant answer. Works with OEM specs, internal reports, and customer requirements. Also spots differences between document versions automatically.
 
 ### 1.2 🔍 PartSeek.Ai — ✅ MVP
-Describe a part in plain text or upload a photo and find the matching component in your parts library. Shows dimensions, material, strength values, and which OEM it applies to.
+Describe a part in plain text and find the matching component in your parts library. Shows dimensions, material, strength values, and which OEM it applies to. Image search via LLaVA planned for 27.03.
 
 ### 1.3 📏 NormSeek.Ai — *(Phase 2)*
 Automatically checks your product data against ISO and OEM standards to catch compliance issues early.
@@ -46,16 +46,21 @@ Shows the cost impact of design decisions while you are still in the development
 | Layer | Technology |
 |-------|------------|
 | Frontend | React, Vite, TailwindCSS, Framer Motion, shadcn/ui |
-| DevOps | Git, GitHub |
+| LLM | llama3:8b via Ollama |
+| Embedding | nomic-embed-text via Ollama (DE + EN) |
+| Vector DB | ChromaDB |
+| RAG | LangChain |
+| Experiment Tracking | MLFlow (local, port 5000) |
+| DevOps | Git, GitHub, gh CLI |
+
+> Ollama is used for TWO functions: LLM (llama3) + Embedding (nomic-embed-text)
 
 ### Planned
 | Layer | Technology |
 |-------|------------|
-| Backend | Python 3.11.3, FastAPI, LangChain |
-| AI / ML | Ollama 0.17.7 (Llama3) |
-| Vector Database | ChromaDB |
-| Experiment Tracking | MLFlow (local) |
-| Infrastructure | Docker |
+| Backend API | FastAPI (Python 3.11.3) |
+| Image Search | LLaVA via Ollama *(try for 27.03)* |
+| Infrastructure | Docker Compose |
 | Testing | Pytest |
 
 ---
@@ -63,83 +68,188 @@ Shows the cost impact of design decisions while you are still in the development
 ## 5. 🚀 Run Locally
 
 ### What you need
-- Node.js v18 or higher
-- npm v9 or higher
 - Python **3.11.3** (exact version required)
 - pyenv
-- Ollama 0.17.7
+- Node.js v18 or higher
+- npm v9 or higher
+- Ollama
 
-### Start the frontend
+### Clone the repo
+
+* Clone the repository and navigate into the project folder:
+
 ```bash
-# Step 1 — Clone the repo
 git clone https://github.com/asimeoa/KnowSeek.git
-
-# Step 2 — Go to the frontend folder
-cd 02_frontend/01_src
-
-# Step 3 — Install packages (only needed once)
-npm install
-
-# Step 4 — Start the app
-npm run dev
+cd KnowSeek
 ```
 
-Open your browser and go to the URL shown in the terminal — usually `http://localhost:8080` or `http://localhost:8081`.
+---
 
-### Stop the app
-Press `Ctrl + C` in the terminal.
+### `macOS` — type the following commands:
 
-### Set up Python environment *(backend — coming soon)*
+* Install the virtual environment and the required packages:
+
 ```bash
-# Step 1 — Set Python version
 pyenv local 3.11.3
-
-# Step 2 — Create virtual environment
 python -m venv .venv
-
-# Step 3 — Activate environment
-source .venv/bin/activate          # macOS / Linux
-# .venv\Scripts\Activate.ps1      # Windows PowerShell
-# source .venv/Scripts/activate   # Windows Git-Bash
-
-# Step 4 — Install dependencies
+source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### Start Ollama + Llama3
-```bash
-# Start Ollama service
-brew services start ollama
+* Start Ollama and pull the required models (only needed once):
 
-# Run Llama3 model
-ollama run llama3
+```bash
+brew services start ollama
+ollama pull llama3
+ollama pull nomic-embed-text
 ```
 
-### Start MLFlow
-MLFlow tracks and compares AI model experiments locally. All data stays on your machine.
-```bash
-# Save MLFlow URI locally (never pushed to GitHub)
-echo http://127.0.0.1:5000/ > .mlflow_uri
+* Start the frontend:
 
-# Start MLFlow UI
+```bash
+cd 02_frontend/01_src
+npm install
+npm run dev
+```
+
+Open your browser at `http://localhost:8880`(or 8881) - press `Ctrl + C` to stop.
+
+* Start MLFlow:
+
+```bash
+echo http://127.0.0.1:5000/ > .mlflow_uri
 mlflow ui
 ```
+
 Open in browser: `http://127.0.0.1:5000`
+
+* Start FastAPI Backend *(coming soon)*:
+
+```bash
+uvicorn main:app --reload --port 8001
+```
+
+---
+
+### `WindowsOS` — type the following commands:
+
+* Install the virtual environment and the required packages by following commands.
+
+For `PowerShell` CLI:
+
+```bash
+pyenv local 3.11.3
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+For `Git-Bash` CLI:
+
+```bash
+pyenv local 3.11.3
+python -m venv .venv
+source .venv/Scripts/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+* Start Ollama and pull the required models (only needed once):
+
+```bash
+ollama serve
+ollama pull llama3
+ollama pull nomic-embed-text
+```
+
+* Start the frontend:
+
+```bash
+cd 02_frontend/01_src
+npm install
+npm run dev
+```
+
+Open your browser at `http://localhost:8081` — press `Ctrl + C` to stop.
+
+* Start MLFlow:
+
+```bash
+echo http://127.0.0.1:5000/ > .mlflow_uri
+mlflow ui
+```
+
+Open in browser: `http://127.0.0.1:5000`
+
+* Start FastAPI Backend *(coming soon)*:
+
+```bash
+uvicorn main:app --reload --port 8001
+```
+
+---
+
+### `Linux / Unix` — type the following commands:
+
+* Install the virtual environment and the required packages:
+
+```bash
+pyenv local 3.11.3
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+* Start Ollama and pull the required models (only needed once):
+
+```bash
+ollama serve
+ollama pull llama3
+ollama pull nomic-embed-text
+```
+
+* Start the frontend:
+
+```bash
+cd 02_frontend/01_src
+npm install
+npm run dev
+```
+
+Open your browser at `http://localhost:8081` — press `Ctrl + C` to stop.
+
+* Start MLFlow:
+
+```bash
+echo http://127.0.0.1:5000/ > .mlflow_uri
+mlflow ui
+```
+
+Open in browser: `http://127.0.0.1:5000`
+
+* Start FastAPI Backend *(coming soon)*:
+
+```bash
+uvicorn main:app --reload --port 8001
+```
 
 ---
 
 ## 6. 📊 Current Status
 
-| Component | Version | Status | Branch |
-|-----------|---------|--------|--------|
-| Frontend UI | rev02_work | ✅ Done | main_sia_03 |
-| Frontend Fixes | rev02_001 | ✅ Done | main_sia_03 |
-| Ollama | 0.17.7 | ✅ Installed | - |
-| Backend | - | 🔜 Next | - |
-| Vector DB (ChromaDB) | - | 🔜 Next | - |
-| Experiment Tracking (MLFlow) | - | 🔜 Next | - |
-| EDA Notebook | - | 🔜 Next | - |
+| Component | Version | Status |
+|-----------|---------|--------|
+| Frontend UI | rev02_001 | ✅ Done |
+| Ollama + llama3 | 0.17.7 | ✅ Running |
+| nomic-embed-text | 274MB | ✅ Installed |
+| ChromaDB | 1.5.5 | ✅ Installed |
+| rank-bm25 | 0.2.2 | ✅ Installed |
+| MLFlow | 3.10.1 | ✅ Running |
+| FastAPI Backend | — | 🔜 Next |
+| EDA Notebook | — | 🔜 Next |
 
 ---
 
@@ -148,7 +258,8 @@ Open in browser: `http://127.0.0.1:5000`
 | Date | Goal |
 |------|------|
 | 20.03.2026 | Midterm — business case, EDA, model comparison |
-| 27.03.2026 | Final — live demo + 10 min presentation |
+| 27.03.2026 | Dry Run — live demo + 10 min presentation |
+| 02.04.2026 | Stakeholder Presentation — final delivery |
 
 ---
 

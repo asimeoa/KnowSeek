@@ -63,8 +63,8 @@
 - [x] RnD_DESCRIPTION.md complete — EVA + OKRs + Master merged
 - [x] Folder cleanup — strategy.md + PROGRESS.md deleted
 - [x] Branch main_sia_03 — rev02_001 active
-- [x] #4 Ask coach: Solo project approval ✅ — approved
 - [x] #3 Solo project approval confirmed
+- [x] #4 Ask coach: Solo project approval ✅ — approved
 - [x] #5 Lovable Fix B — NormSeek + CostSeek sidebar icons
 - [x] #6 Lovable Fix 2d — Sidebar icons equal brightness
 - [x] #7 Lovable Fix 3 — Search field inner light ray effect
@@ -95,9 +95,12 @@
 | 17.03 | — | PartSeek basic search working | Text search returns part + metadata |
 | 18.03 | #13 | Baseline BM25 + MLFlow logged | Baseline vs llama3 comparison |
 | 18.03 | #14 | llama3 RAG pipeline results logged | MLFlow experiment complete |
-| 18.03 | #11 | EDA Notebook clean version | Charts, spider diagram, language distribution |
-| 18.03 | #29 🎯| Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
-| 18.03 |  #31 🎯 | Multi language DE/EN working | Test queries in DE + EN — results verified |
+| 18.03 | #11 | EDA Section 1 — Data Overview | Bar chart: files per category, file types |
+| 18.03 | #11 | EDA Section 2 — PDF Analysis | Pages, chunks, language DE vs EN |
+| 18.03 | #11 | EDA Section 3 — BM25 vs RAG | Bar chart: scores + answer time |
+| 18.03 | #11 | EDA Section 4 — LLaVA images | If ready — image search demo |
+| 18.03 | #29 🎯 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
+| 18.03 | #31 🎯 | Multi language DE/EN working | Test queries in DE + EN — results verified |
 | 18.03 | #32 🎯 | Zero data leaves machine verified | No external API calls confirmed |
 | 18–19.03 | #19 | **Midterm PPT — build** | See slide structure below |
 | 19.03 | #20 | PPT finalized + rehearsed | 10 min timing |
