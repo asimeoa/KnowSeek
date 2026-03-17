@@ -4,7 +4,7 @@ ingest.py — KnowSeek.Ai — DocSeek Module
 Loads PDF files, splits them into chunks,
 adds metadata, and stores everything in ChromaDB.
 
-Version: rev04_work
+Version: rev05_002
 Branch:  main_sia05
 
 Chapters:
@@ -80,6 +80,9 @@ CATEGORY_MAP = {
     "flange":    "Bolts+Torque",
     "torx":      "Bolts+Torque",
     "hex":       "Bolts+Torque",
+    "nut":       "Bolts+Torque",
+    "din":       "Bolts+Torque",
+    "mbn":       "Bolts+Torque",
     "interior":  "Dimensions",
     "structure": "Dimensions",
 }
@@ -140,6 +143,22 @@ def make_source_id(filename: str, page: int, chunk_index: int) -> str:
     return "#" + hashlib.md5(raw.encode()).hexdigest()[:6].upper()
 
 
+# 4.6 get_language
+def get_language(text: str) -> str:
+    """
+    Detect language from text.
+    Simple heuristic — checks for German keywords.
+    """
+    german_keywords = [
+        "und", "der", "die", "das", "ist", "mit", "für",
+        "von", "nicht", "auch", "auf", "dem", "ein", "eine"
+    ]
+    words = text.lower().split()
+    german_count = sum(1 for w in words if w in german_keywords)
+    ratio = german_count / len(words) if words else 0
+    return "DE" if ratio > 0.05 else "EN"
+
+
 # ─────────────────────────────────────────────────────
 # 5. MAIN FUNCTIONS
 # ─────────────────────────────────────────────────────
@@ -191,7 +210,7 @@ def chunk_pages(pages: list[dict], config: dict) -> list[dict]:
 
 # 5.3 build_metadata
 def build_metadata(filename: str, page: int, chunk_index: int,
-                   total_pages: int, config_name: str) -> dict:
+                   total_pages: int, config_name: str, text: str = "") -> dict:
     """
     Build the metadata dict for a single chunk.
     Anti-hallucination schema — RnD_DESCRIPTION.md Section 12.
@@ -204,7 +223,7 @@ def build_metadata(filename: str, page: int, chunk_index: int,
         "oem_code":     get_oem_code(filename),
         "category":     get_category(filename),
         "doc_type":     get_doc_type(total_pages),
-        "language":     "EN",
+        "language":     get_language(text),
         "verified":     True,
         "chunk_config": config_name,
     }
@@ -215,17 +234,18 @@ def load_and_chunk(
     data_path: Path = DATA_PATH,
     config_name: str = DEFAULT_CONFIG,
     verbose: bool = True
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     """
     Load all PDFs from data_path and split into chunks.
-    Returns list of dicts with text + metadata.
+    Returns tuple: (chunks, skipped)
 
     Usage:
-        chunks = load_and_chunk()
-        chunks = load_and_chunk(config_name="large")
+        chunks, skipped = load_and_chunk()
+        chunks, skipped = load_and_chunk(config_name="large")
     """
     config     = CHUNK_CONFIGS[config_name]
     all_chunks = []
+    skipped    = []
     pdf_files  = list(data_path.rglob("*.pdf"))
 
     if verbose:
@@ -252,8 +272,9 @@ def load_and_chunk(
                 page=chunk["page"],
                 chunk_index=chunk["chunk_index"],
                 total_pages=total_pages,
-                config_name=config_name
-            )
+                config_name=config_name,
+                text=chunk["text"]
+        )
             all_chunks.append({
                 "text":     chunk["text"],
                 "metadata": metadata
@@ -262,11 +283,20 @@ def load_and_chunk(
         if verbose:
             print(f"    Pages: {total_pages} — Chunks: {len(chunks)}")
 
+    # Find all unsupported files
+    supported = [".pdf", ".docx", ".xlsx", ".png", ".webp", ".jpg"]
+    for f in data_path.rglob("*"):
+        if f.is_file() and not f.name.startswith(".") and f.suffix != "" and f.suffix.lower() not in supported:
+            skipped.append({
+                "folder": f.parent.name,
+                "type":   f.suffix.lower()
+            })
+
     if verbose:
         print()
         print(f"Total chunks: {len(all_chunks)}")
 
-    return all_chunks
+    return all_chunks, skipped
 
 
 # 5.5 store_in_chromadb
@@ -334,8 +364,8 @@ def run_ingest(
         summary = run_ingest(config_name="large")
     """
     start  = time.time()
-    chunks = load_and_chunk(data_path=data_path, config_name=config_name)
-    store_in_chromadb(chunks, collection_name=collection_name)
+    chunks, skipped = load_and_chunk(data_path=data_path, config_name=config_name, verbose=False)
+    store_in_chromadb(chunks, collection_name=collection_name, verbose=False)# verbose=False to reduce console output not File names visible in console output
     elapsed = round(time.time() - start, 2)
     config  = CHUNK_CONFIGS[config_name]
 
@@ -354,6 +384,18 @@ def run_ingest(
     for k, v in summary.items():
         print(f"  {k:<20} {v}")
     print("──────────────────────────────────────")
+
+    if skipped:
+        from collections import Counter
+        skip_count = Counter(f"{s['folder']}|{s['type']}" for s in skipped)
+        print()
+        print("─── Skipped files ────────────────────")
+        for key, count in skip_count.items():
+            folder, ftype = key.split("|")
+            print(f"  {folder:<20} {count} file(s)   {ftype}   ⚠️ not supported")
+    else:
+        print()
+        print("✅  All file types supported")
 
     return summary
 

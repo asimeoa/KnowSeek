@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05**
+**Version: rev05_002 — Last updated: 17.03.2026 — Branch: main_sia05**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -17,9 +17,9 @@
 ## Capstone Requirements Checklist
 
 - [ ] Business question clearly stated with background and impact
-- [ ] Technical EDA completed in Python
-- [ ] Multiple models tried and compared
-- [ ] MLFlow experiment tracking in place
+- [x] Technical EDA completed in Python
+- [x] Multiple models tried and compared
+- [x] MLFlow experiment tracking in place
 - [x] All work stored in GitHub repo
 - [ ] Final presentation slides in GitHub repo
 - [ ] 10 min presentation ready
@@ -45,7 +45,7 @@
 
 - [x] Frontend UI Design finalized (rev02_work) — Lovable exported + tested
 - [x] GitHub repo structure clean — Folder 01–06 in place
-- [x] README rev04_001 — macOS + Windows + Linux setup
+- [x] README rev05_002 — macOS + Windows + Linux setup
 - [x] Sprint Plan created — this file
 - [x] DEV_NOTES created — local setup instructions
 - [x] GitHub Projects Board — 39 issues, 3 milestones
@@ -61,7 +61,7 @@
 - [x] Chunking strategy decided — 4 document types, chunk sizes defined
 - [x] Code structure decided — .py files for logic, notebooks for EDA only
 - [x] OKRs defined — Objective + KRs for platform, DocSeek, PartSeek
-- [x] RnD_DESCRIPTION.md rev04_001 — EVA + OKRs + Metadata Schema
+- [x] RnD_DESCRIPTION.md rev05_002 — EVA + OKRs + Metadata Schema
 - [x] OKR Diagram — okr_diagram.svg in 03_docs/pictures/
 - [x] Folder cleanup — strategy.md + PROGRESS.md deleted
 - [x] Branch main_sia_03 → main_sia_04 → main_sia05
@@ -72,7 +72,7 @@
 - [x] #7 Lovable Fix 3 — Search field inner light ray effect
 - [x] #8 Ollama install and test locally — llama3
 - [x] #9 ChromaDB install and test locally
-- [x] #10 Python virtual environment + requirements.txt ✅
+- [x] #10 Python virtual environment + requirements.txt rev05_002 ✅
 - [x] Setup ChromaDB — chromadb 1.5.5 installed ✅
 - [x] #39 Anonymized OEM test data loaded — 01_Fasteners / 02_Specifikation / 03_Painting ✅
 - [x] Pull nomic-embed-text — nomic-embed-text 274MB installed ✅
@@ -82,11 +82,19 @@
 - [x] #31 🎯 Multi language DE + EN working ✅
 - [x] #32 🎯 Zero data leaves local machine — verified ✅
 - [x] EDA.ipynb Gerüst — 6 Chapters + Control Hub ✅
+- [x] OCR pipeline — pytesseract + Pillow + fpdf2 ✅
+- [x] PNG → searchable PDF conversion — 01_Fasteners ✅
+- [x] 15 docs / 59 chunks / 4 categories in ChromaDB ✅
+- [x] DE/EN language detection — get_language() in ingest.py ✅
+- [x] Bolts+Torque category — CATEGORY_MAP updated ✅
+- [x] #13 BM25 Baseline — avg_score: 4.712 — logged in MLFlow ✅
+- [x] #14 RAG llama3 — avg_score: 0.861 — logged in MLFlow ✅
+- [x] EDA Chapter 3 complete — Data Overview + PDF Analysis + Chunk Size + Language ✅
 
 ### Still open — Week 1
 
 - [ ] 🟡 #15 FastAPI basic endpoints — `GET /api/health` + `POST /api/docseek/query`
-- [ ] 🟡 #11 EDA Notebook — Charts with real data
+- [ ] 🟡 #11 EDA Notebook — Chapter 6 BM25 vs RAG comparison chart
 
 ---
 
@@ -98,13 +106,8 @@
 |-----|-------|------|-------------|
 | 17.03 | #26 | OEM brand names anonymized | OEM-V / OEM-W / OEM-G in frontend + docs |
 | 17.03 | — | PartSeek basic search working | Text search returns part + metadata |
-| 18.03 | #13 | Baseline BM25 + MLFlow logged | Baseline vs llama3 comparison |
-| 18.03 | #14 | llama3 RAG pipeline results logged | MLFlow experiment complete |
-| 18.03 | #11 | EDA Section 1 — Data Overview | Bar chart: files per category, file types |
-| 18.03 | #11 | EDA Section 2 — PDF Analysis | Pages, chunks, language DE vs EN |
-| 18.03 | #11 | EDA Section 3 — BM25 vs RAG | Bar chart: scores + answer time |
-| 18.03 | #11 | EDA Section 4 — LLaVA images | If ready — image search demo |
-| 18.03 | #29 🎯 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
+| 17.03 | #11 | EDA Chapter 6 — BM25 vs RAG comparison | Bar chart: scores + answer time |
+| 17.03 | #29 🎯 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
 | 18–19.03 | #19 | **Midterm PPT — build** | See slide structure below |
 | 19.03 | #20 | PPT finalized + rehearsed | 10 min timing |
 | 19.03 | #20 | PPT pushed to GitHub | `04_progress/` |
@@ -206,19 +209,21 @@
 | nomic-embed-text | 274MB | ✅ Installed |
 | ChromaDB | 1.5.5 | ✅ Installed |
 | rank-bm25 | 0.2.2 | ✅ Installed |
-| MLFlow | 3.10.1 | ✅ Running — port 5000 |
-| 05_data | — | ✅ Anonymized data loaded |
-| ingest.py (DocSeek) | rev04_work | ✅ Done — 7 PDFs, 47 chunks |
-| search.py (DocSeek) | rev04_work | ✅ Done — ChromaDB search working |
-| answer.py (DocSeek) | rev04_work | ✅ Done — RAG + OEM comparison |
-| RAG Pipeline DE+EN | — | ✅ Verified — answer.py |
-| FastAPI | — | 🔜 Next |
-| EDA Notebook | — | 🔜 Week 2 |
-| Midterm PPT | rev04_work | 🔜 Week 2 |
+| MLFlow | 3.10.1 | ✅ Running — BM25 + RAG logged ✅ |
+| 05_data | — | ✅ 15 docs / 59 chunks / 4 categories |
+| ingest.py (DocSeek) | rev05_002 | ✅ Done — OCR + language detect + 4 categories |
+| search.py (DocSeek) | rev05_002 | ✅ Done — filter + confidence score |
+| answer.py (DocSeek) | rev05_002 | ✅ Done — RAG + OEM comparison + partial results |
+| OCR pipeline | rev05_002 | ✅ Done — pytesseract + fpdf2 |
+| EDA Notebook | rev05_work | 🔜 Chapter 3 done — Chapter 6 next |
+| FastAPI | — | 🔜 Week 2 |
+| Midterm PPT | — | 🔜 17–19.03 |
 | Technical PPT | — | 🔜 Week 3 |
 | Stakeholder PPT | — | 🔜 Week 4 |
-| RnD_DESCRIPTION.md | rev04_001 | ✅ Done |
-| build_ppt.py | rev04_work | ✅ Done — PPT builder |
+| RnD_DESCRIPTION.md | rev05_002 | ✅ Done |
+| README.md | rev05_002 | ✅ Done |
+| requirements.txt | rev05_002 | ✅ Done |
+| build_ppt.py | rev05_002 | ✅ Done — PPT builder |
 | docker-compose.yml | — | 🔜 Planned |
 
 ---
@@ -276,4 +281,4 @@ gh issue edit <number> --remove-label "labelname"
 ---
 
 *Save in: `04_progress/sprint_logs/SPRINT_PLAN.md`*
-*Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05*
+*Version: rev05_002 — Last updated: 17.03.2026 — Branch: main_sia05*
