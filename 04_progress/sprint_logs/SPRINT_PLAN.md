@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev05_002 — Last updated: 17.03.2026 — Branch: main_sia05**
+**Version: rev05_003_work — Last updated: 17.03.2026 um 20:32 — Branch: main_sia05**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -104,7 +104,7 @@
 
 | Day | Issue | Task | Deliverable |
 |-----|-------|------|-------------|
-| 17.03 | #26 | OEM brand names anonymized | OEM-V / OEM-W / OEM-G in frontend + docs |
+| 17.03 | #26 | OEM & Standards Icon Implementation | Icons in  frontend and connect to the search outcome|
 | 17.03 | — | PartSeek basic search working | Text search returns part + metadata |
 | 17.03 | #11 | EDA Chapter 6 — BM25 vs RAG comparison | Bar chart: scores + answer time |
 | 17.03 | #29 🎯 | Answer time measured + visualized | Baseline vs RAG bar chart in EDA.ipynb |
