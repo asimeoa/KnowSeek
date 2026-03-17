@@ -1,7 +1,7 @@
 # KnowSeek.Ai 🧠
 > **Stop searching. Start knowing.**
 
-**Version: rev04_001 — Last updated: 13.03.2026 — Branch: main_sia_04**
+**Version: rev05_002 — Last updated: 16.03.2026 — Branch: main_sia05**
 
 KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
@@ -76,12 +76,12 @@ Shows the cost impact of design decisions while you are still in the development
 
 ### Clone the repo
 
-* Clone the repository and navigate into the project folder:
-
 ```bash
 git clone https://github.com/asimeoa/KnowSeek.git
 cd KnowSeek
 ```
+
+> ⚠️ This project requires data files in `05_data/` — see Section 6 below.
 
 ---
 
@@ -113,7 +113,7 @@ npm install
 npm run dev
 ```
 
-Open your browser at `http://localhost:8880`(or 8881) - press `Ctrl + C` to stop.
+Open your browser at `http://localhost:8081` — press `Ctrl + C` to stop.
 
 * Start MLFlow:
 
@@ -133,8 +133,6 @@ uvicorn main:app --reload --port 8001
 ---
 
 ### `WindowsOS` — type the following commands:
-
-* Install the virtual environment and the required packages by following commands.
 
 For `PowerShell` CLI:
 
@@ -193,8 +191,6 @@ uvicorn main:app --reload --port 8001
 
 ### `Linux / Unix` — type the following commands:
 
-* Install the virtual environment and the required packages:
-
 ```bash
 pyenv local 3.11.3
 python -m venv .venv
@@ -238,7 +234,30 @@ uvicorn main:app --reload --port 8001
 
 ---
 
-## 6. 📊 Current Status
+## 6. 📂 Data Setup
+
+> ⚠️ The `05_data/` folder is not included in this repo (IP protection).
+
+Put your files here before running the notebook:
+
+```
+05_data/
+├── 01_Fasteners/     ← part datasheets (PDF)
+├── 02_Specifikation/ ← OEM specification PDFs
+└── 03_Painting/      ← paint standard PDFs
+```
+
+Supported file types: `.pdf` `.png` `.webp` `.jpg` `.docx` `.xlsx`
+
+Then run the ingest pipeline:
+
+```bash
+python 01_backend/modules/02_docseek/ingest.py
+```
+
+---
+
+## 7. 📊 Current Status
 
 | Component | Version | Status |
 |-----------|---------|--------|
@@ -248,12 +267,15 @@ uvicorn main:app --reload --port 8001
 | ChromaDB | 1.5.5 | ✅ Installed |
 | rank-bm25 | 0.2.2 | ✅ Installed |
 | MLFlow | 3.10.1 | ✅ Running |
-| FastAPI Backend | — | 🔜 Next |
-| EDA Notebook | — | 🔜 Next |
+| ingest.py (DocSeek) | rev05_002 | ✅ Done — 59 chunks, 15 docs |
+| search.py (DocSeek) | rev05_002 | ✅ Done — 4 categories |
+| answer.py (DocSeek) | rev05_002 | ✅ Done — RAG + OEM comparison |
+| EDA Notebook | rev05_work | 🔜 Chapter 3 done — Chapter 6 next |
+| FastAPI Backend | — | 🔜 Week 2 |
 
 ---
 
-## 7. 📅 Key Dates
+## 8. 📅 Key Dates
 
 | Date | Goal |
 |------|------|

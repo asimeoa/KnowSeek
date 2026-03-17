@@ -1,6 +1,5 @@
 # KnowSeek.ai — Python Dependencies
-# Version: rev02_001 — Last updated: 12.03.2026
-# Branch: main
+# Version: rev05_002 — Last updated: 16.03.2026 — Branch: main_sia05
 #
 # Note: Ollama is used for TWO functions:
 #   1. LLM — llama3:8b — answer generation
@@ -8,6 +7,9 @@
 #   Install: brew install ollama
 #   Models:  ollama pull llama3
 #            ollama pull nomic-embed-text
+#
+# Note: OCR requires system dependency:
+#   brew install tesseract tesseract-lang
 
 # ─────────────────────────────────────────────
 # AI & RAG Framework
@@ -26,7 +28,9 @@ chromadb
 # ─────────────────────────────────────────────
 pdfplumber                   # Digital PDF text + table extraction
 pymupdf                      # PDF image extraction + metadata (fitz)
-pytesseract                  # OCR for scanned PDFs
+pytesseract                  # OCR for scanned PDFs + images
+Pillow                       # Image processing for OCR
+fpdf2                        # Convert OCR text to searchable PDF
 python-docx                  # DOCX parsing
 openpyxl                     # XLSX parsing
 
@@ -34,6 +38,7 @@ openpyxl                     # XLSX parsing
 # Baseline Model
 # ─────────────────────────────────────────────
 rank-bm25                    # BM25 keyword search — baseline for MLFlow comparison
+
 # ─────────────────────────────────────────────
 # API & Web Server
 # ─────────────────────────────────────────────
@@ -48,6 +53,7 @@ pandas
 matplotlib
 seaborn                      # Statistical charts, heatmaps
 plotly                       # Interactive charts, spider diagram
+nbformat>=4.2.0              # Required for Plotly rendering in Jupyter
 
 # ─────────────────────────────────────────────
 # Experiment Tracking
