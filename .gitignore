@@ -217,3 +217,7 @@ mlruns/
 *.pdf
 .DS_Store
 **/.DS_Store
+
+# Databases & Vector Stores
+chroma_db/
+**/chroma_db/
