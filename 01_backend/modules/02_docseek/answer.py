@@ -5,7 +5,7 @@ Takes search results from search.py,
 sends them to llama3 via Ollama,
 returns a clean answer with source + confidence.
 
-Version: rev04_work
+Version: rev05_002
 Branch:  main_sia05
 
 Chapters:
@@ -81,11 +81,13 @@ def build_prompt(question: str, context: str) -> str:
     return f"""You are a professional engineering assistant for an automotive supplier.
 
 RULES:
-- Answer ONLY based on the documents provided below.
+- Answer based on the documents provided below.
 - Always include the source document and page number.
-- If the answer is not in the documents, say: "I could not find this information in the available documents."
-- Keep your answer short, clear, and technical.
-- Do not guess or make up information.
+- If you find exact information — state it clearly.
+- If you find related or partial information — share it but mark it as: "Based on similar content:"
+- If truly nothing is found — say: "I could not find this information in the available documents."
+- Do not guess. Do not invent numbers.
+- Keep your answer short and technical.
 
 DOCUMENTS:
 {context}

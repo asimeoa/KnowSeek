@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05*
+*Version: rev05_002 — Last updated: 16.03.2026 — Branch: main_sia05*
 
 > All data stays local. No cloud. No internet required.
 
@@ -141,6 +141,7 @@ GET  /api/health         ←  server status check
 | Baseline model | rank-bm25 | Keyword search — baseline for MLFlow comparison |
 | Vector database | ChromaDB | Simple, local, persistent, no server needed |
 | RAG framework | LangChain | PDF/DOCX/XLSX loaders + memory + multi-query |
+| OCR | pytesseract + Pillow + fpdf2 | Convert image-based files to searchable PDF |
 | Backend API | FastAPI (Python 3.11.3) | REST API between AI logic and frontend |
 | Frontend | React + Vite + TailwindCSS | Fast, modern UI |
 | UI components | shadcn/ui + Framer Motion | Spring physics animations |
@@ -200,7 +201,7 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 ```
 01_backend/modules/
 ├── 02_docseek/
-│   ├── ingest.py       ← load documents, chunk, store in ChromaDB ✅
+│   ├── ingest.py       ← load, OCR, chunk, language detect, store in ChromaDB ✅
 │   ├── search.py       ← find relevant chunks in ChromaDB ✅
 │   └── answer.py       ← send chunks to llama3, return answer + source ✅
 ├── 01_partseek/
@@ -213,8 +214,13 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 └── knowseek_prototype.ipynb
 ```
 
+**Key functions in ingest.py:**
+- `get_language(text)` — detects DE vs EN automatically
+- `get_category(filename)` — maps filename to category (Corrosion / Painting / Bolts+Torque)
+- `get_oem_code(filename)` — maps filename to OEM code
+- `run_ingest()` — full pipeline: load → chunk → vectorize → store
+
 > The notebook is the **window** — the .py files are the **engine**.
-> You can run the full system from the notebook by calling the .py files directly.
 
 ---
 
@@ -244,10 +250,11 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### E1. File Formats
 
-| Format | Tool | 🟢🟡🔴 | Notes |
+| Format | Tool | R/Y/G | Notes |
 |--------|------|--------|-------|
 | PDF (digital) | pdfplumber + LangChain | 🟢 | Main format — specs, reports, standards |
 | PDF (scanned) | pytesseract (OCR) | 🟡 | Quality depends on scan resolution |
+| PNG / WEBP (images) | pytesseract + fpdf2 | 🟡 | Converted to searchable PDF via OCR ✅ |
 | Word (.docx) | LangChain DocLoader | 🟢 | Technical documents, reports |
 | Excel (.xlsx) | LangChain + openpyxl | 🟢 | Requirements lists, test tables |
 | Images with tables | pdfplumber | 🟡 | Digital PDFs only — not scanned |
@@ -272,7 +279,7 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### E3. User Input
 
-| Input Type | Module | 🟢🟡🔴 | Notes |
+| Input Type | Module | R/Y/G | Notes |
 |------------|--------|--------|-------|
 | Free text query (DE/EN) | DocSeek + PartSeek | 🟢 | Core feature — verified ✅ |
 | Follow-up questions | DocSeek | 🟢 | Last 5 queries remembered |
@@ -286,18 +293,20 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### V1. Document Processing
 
-| Step | Tool | 🟢🟡🔴 | Notes |
+| Step | Tool | R/Y/G | Notes |
 |------|------|--------|-------|
 | PDF text extraction | pdfplumber | 🟢 | Best for digital PDFs with tables |
 | PDF image extraction | PyMuPDF (fitz) | 🟢 | Images + metadata |
-| OCR (scanned docs) | pytesseract | 🟡 | Struggles with small fonts + symbols (±, ⌀, °) |
+| OCR (scanned docs + images) | pytesseract + Pillow | 🟡 | Tested on fastener datasheets ✅ |
+| Image → searchable PDF | fpdf2 | 🟢 | OCR text saved as PDF ✅ |
+| Language detection | get_language() | 🟢 | DE vs EN — heuristic keyword check ✅ |
 | DOCX parsing | LangChain DocLoader | 🟢 | Clean extraction |
 | XLSX parsing | LangChain + openpyxl | 🟢 | Tables and structured data |
 | Image description | LLaVA (Ollama)* | 🔴 | Phase 2 |
 
 #### V2. Chunking Strategy
 
-| Document Type | Size | Chunk | Overlap | 🟢🟡🔴 |
+| Document Type | Size | Chunk | Overlap | R/Y/G |
 |---------------|------|-------|---------|--------|
 | 1-Pager (1–2 pages) | < 1MB | 256 | 50 | 🟢 |
 | Technical sheet (5–20p) | 1–3MB | 500 | 100 | 🟢 |
@@ -308,20 +317,20 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### V3. Vector Database
 
-| Tool | 🟢🟡🔴 | Decision | Notes |
+| Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
 | **ChromaDB** | 🟢 | ✅ Selected | Local, simple, persistent |
 | FAISS | 🟡 | ❌ Rejected | Faster but limited metadata support |
 
 #### V4. RAG Framework
 
-| Tool | 🟢🟡🔴 | Decision | Notes |
+| Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
 | **LangChain** | 🟢 | ✅ Selected | Loaders + Memory + Multi-Query |
 
 #### V5. LLM + Baseline
 
-| Model | Size | 🟢🟡🔴 | Decision |
+| Model | Size | R/Y/G | Decision |
 |-------|------|--------|----------|
 | **llama3:8b (Ollama)** | 4.7GB | 🟢 | ✅ Selected — main model |
 | **rank-bm25** | — | 🟢 | ✅ Baseline — keyword search for MLFlow comparison |
@@ -329,18 +338,17 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### V6. Experiment Tracking
 
-| Tool | 🟢🟡🔴 | Decision | Notes |
+| Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
 | **MLFlow (local)** | 🟢 | ✅ Selected | Tracks embedding + chunking experiments |
 
-**MLFlow Experiments planned:**
-- BM25 baseline vs RAG + llama3 comparison
-- Embedding model comparison (retrieval quality score)
-- Chunking strategy comparison (chunk size vs accuracy)
+**MLFlow Experiments logged:**
+- BM25 Baseline — avg_score: 4.712, avg_time: 0.19ms ✅
+- RAG llama3 — avg_score: 0.861, avg_time: 17932ms ✅
 
 #### V7. Memory & Conversation
 
-| Feature | Tool | 🟢🟡🔴 | Notes |
+| Feature | Tool | R/Y/G | Notes |
 |---------|------|--------|-------|
 | Follow-up questions | ConversationBufferMemory | 🟢 | Last 5 queries |
 | Multi-doc comparison | Multi-Query Retrieval | 🟢 | e.g. OEM-V vs OEM-W vs OEM-G |
@@ -348,7 +356,7 @@ This section documents every tool evaluated — with reliability rating and deci
 
 #### V8. Infrastructure
 
-| Service | Port | 🟢🟡🔴 | Notes |
+| Service | Port | R/Y/G | Notes |
 |---------|------|--------|-------|
 | Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Running |
 | ChromaDB | 8000 | 🟢 | ✅ Installed + tested |
@@ -372,7 +380,7 @@ docker compose stop    # stop everything
 
 #### V9. Frontend & DevOps
 
-| Tool | 🟢🟡🔴 | Decision | Notes |
+| Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
 | React + Vite | 🟢 | ✅ Selected | Fast, modern frontend |
 | TailwindCSS | 🟢 | ✅ Selected | Utility-first styling |
@@ -390,7 +398,7 @@ docker compose stop    # stop everything
 
 #### A1. Search Results
 
-| Feature | 🟢🟡🔴 | Notes |
+| Feature | R/Y/G | Notes |
 |---------|--------|-------|
 | Answer + source link + highlight | 🟢 | Core feature — working ✅ |
 | Confidence score 🟢🟡🔴 | 🟢 | ChromaDB similarity score — working ✅ |
@@ -400,7 +408,7 @@ docker compose stop    # stop everything
 
 #### A2. DocSeek Output
 
-| Feature | 🟢🟡🔴 | Notes |
+| Feature | R/Y/G | Notes |
 |---------|--------|-------|
 | Compare across all docs | 🟢 | OEM comparison working ✅ |
 | Follow-up questions | 🟢 | Context remembered |
@@ -412,7 +420,7 @@ docker compose stop    # stop everything
 
 #### A3. PartSeek Output
 
-| Feature | 🟢🟡🔴 | Notes |
+| Feature | R/Y/G | Notes |
 |---------|--------|-------|
 | Part image + dimensions (A/B/C) | 🟢 | From datasheet metadata |
 | Material + surface treatment | 🟢 | Parsed from PDF |
@@ -429,10 +437,11 @@ docker compose stop    # stop everything
 
 ### 9.1 Supported File Types
 
-| Format | Tool | 🟢🟡🔴 | Notes |
+| Format | Tool | R/Y/G | Notes |
 |--------|------|--------|-------|
 | PDF (digital) | pdfplumber + LangChain | 🟢 | Main format |
 | PDF (scanned) | pytesseract (OCR) | 🟡 | Quality depends on scan |
+| PNG / WEBP | pytesseract + fpdf2 | 🟡 | OCR → searchable PDF ✅ |
 | Word (.docx) | LangChain DocLoader | 🟢 | Clean extraction |
 | Excel (.xlsx) | LangChain + openpyxl | 🟢 | Tables + structured data |
 | Images with tables | pdfplumber | 🟡 | Digital PDFs only |
@@ -443,7 +452,7 @@ docker compose stop    # stop everything
 
 ### 9.2 Chunking Strategy
 
-| Document Type | Size | Chunk | Overlap | 🟢🟡🔴 |
+| Document Type | Size | Chunk | Overlap | R/Y/G |
 |---------------|------|-------|---------|--------|
 | 1-Pager | < 1MB | 256 | 50 | 🟢 |
 | Technical sheet (5–20p) | 1–3MB | 500 | 100 | 🟢 |
@@ -464,7 +473,7 @@ A table with requirement, OEM, value, and status (🟢 same / ❌ different / �
 
 ### 10.1 Search Input
 
-| Input | 🟢🟡🔴 | Notes |
+| Input | R/Y/G | Notes |
 |-------|--------|-------|
 | Text description | 🟢 | Semantic search via ChromaDB |
 | Search by properties | 🟢 | Material, strength, force values |
@@ -513,13 +522,14 @@ metadata = {
     "source_id":    "#74",
     "filename":     "OEM-V_SPEC_001.pdf",
     "page":         14,
-    "date":         "20260314",
-    "category":     "Corrosion",        # Corrosion / Bolts+Torque / Dimensions / Material
-    "doc_type":     "Lastenheft",       # Lastenheft / Datasheet / Standard / Drawing
-    "language":     "EN",               # DE / EN / DE+EN
-    "oem_code":     "OEM-V",            # OEM-V / OEM-W / OEM-G
+    "date":         "20260316",
+    "category":     "Corrosion",        # Corrosion / Bolts+Torque / Painting / General
+    "doc_type":     "1-Pager",          # 1-Pager / Datasheet / Standard / Lastenheft
+    "language":     "EN",               # DE / EN — auto-detected by get_language()
+    "oem_code":     "OEM-V",            # OEM-G / OEM-M / OEM-Z / OEM-H / OEM-S / OEM-B
     "verified":     True,
     "chunk_index":  3,
+    "chunk_config": "medium",           # small / medium / large
 }
 ```
 
@@ -547,9 +557,9 @@ KnowSeek/
 │   ├── modules/
 │   │   ├── 01_partseek/        ← Phase 2
 │   │   ├── 02_docseek/
-│   │   │   ├── ingest.py       ✅ done
-│   │   │   ├── search.py       ✅ done
-│   │   │   └── answer.py       ✅ done
+│   │   │   ├── ingest.py       ✅ rev05_002
+│   │   │   ├── search.py       ✅ rev05_002
+│   │   │   └── answer.py       ✅ rev05_002
 │   │   ├── 03_normseek/        ← Phase 2
 │   │   └── 04_costseek/        ← Phase 3
 │   └── main.py
@@ -561,22 +571,22 @@ KnowSeek/
 │   ├── discovery/
 │   ├── pictures/
 │   │   └── okr_diagram.svg
-│   └── RnD_DESCRIPTION.md     ← This file
+│   └── RnD_DESCRIPTION.md     ← This file — rev05_002
 ├── 04_progress/
 │   └── sprint_logs/
 │       └── SPRINT_PLAN.md      ← rev05_001
 ├── 05_data/                    ← Local only — never pushed to GitHub
-│   ├── 01_Fasteners/
-│   ├── 02_Specifikation/
-│   └── 03_Painting/
+│   ├── 01_Fasteners/           ← 8x PNG + 8x PDF (OCR converted) ✅
+│   ├── 02_Specifikation/       ← 5x PDF ✅
+│   └── 03_Painting/            ← 2x PDF ✅
 ├── 06_notebooks/
-│   └── EDA.ipynb
-├── build_ppt.py                ← PPT builder
+│   └── EDA.ipynb               ← rev05_work
+├── build_ppt.py                ← PPT builder rev05_002
 ├── docker-compose.yml          ← Planned
 ├── .gitignore
 ├── LICENSE
-├── README.md
-└── requirements.txt
+├── README.md                   ← rev05_002
+└── requirements.txt            ← rev05_002
 ```
 
 ---
@@ -599,20 +609,21 @@ KnowSeek/
 | Frontend (Lovable) | ✅ | React UI running on port 8081 |
 | Frontend fixes | ✅ | Glow, icons, pulse animations |
 | Kanban board | ✅ | GitHub Projects — 39 issues, 3 milestones |
-| RnD_DESCRIPTION.md | ✅ | EVA + OKRs + Metadata Schema |
+| RnD_DESCRIPTION.md | ✅ | EVA + OKRs + Metadata Schema — rev05_002 |
 | Ollama + llama3 | ✅ | v0.17.7 — 4.7GB |
 | nomic-embed-text | ✅ | 274MB — via Ollama |
-| Python venv + requirements.txt | ✅ | Python 3.11.3 |
+| Python venv + requirements.txt | ✅ | Python 3.11.3 — rev05_002 |
 | ChromaDB | ✅ | v1.5.5 installed + tested |
 | rank-bm25 | ✅ | v0.2.2 installed |
-| MLFlow | ✅ | Running on port 5000 |
-| Anonymized test data | ✅ | 01_Fasteners / 02_Specifikation / 03_Painting |
-| ingest.py (DocSeek) | ✅ | 7 PDFs loaded — 47 chunks in ChromaDB |
-| search.py (DocSeek) | ✅ | Similarity search + confidence score working |
-| answer.py (DocSeek) | ✅ | RAG pipeline + OEM comparison working |
-| DE + EN verified | ✅ | German + English queries tested |
+| MLFlow | ✅ | Running on port 5000 — BM25 + RAG logged ✅ |
+| Anonymized test data | ✅ | 15 docs / 59 chunks / 4 categories |
+| ingest.py (DocSeek) | ✅ | OCR + language detection + 4 categories — rev05_002 |
+| search.py (DocSeek) | ✅ | Similarity search + filter + confidence — rev05_002 |
+| answer.py (DocSeek) | ✅ | RAG + OEM comparison + partial results — rev05_002 |
+| DE + EN verified | ✅ | 45 EN / 14 DE chunks — auto-detected |
+| OCR pipeline | ✅ | pytesseract + fpdf2 — Fastener PDFs converted |
 | FastAPI first endpoint | 🔜 | Week 2 |
-| EDA Notebook | 🔜 | Week 2 |
+| EDA Notebook | 🔜 | Chapter 3 done — Chapter 6 next |
 
 ---
 
@@ -622,7 +633,9 @@ KnowSeek/
 |------------|--------|------------|------------|
 | Geometry from drawings not extractable | Image search limited | Text fields only — warning shown | Phase 2 LLaVA |
 | Scanned PDFs — OCR quality varies | Some docs partially indexed | Warning shown to user | MVP accepted |
+| OCR on technical drawings — partial | Symbols (±, ⌀, °) often missed | Use digital PDFs where possible | MVP accepted |
 | Tables in scanned images — partial | Some table data missed | Use digital PDFs | MVP accepted |
+| High ChromaDB score ≠ good answer | Misleading confidence signal | Explain in UI — separate answer quality score | Phase 2 |
 | Large Lastenhefte (300p) — slow | Ingestion takes time | Background processing | MVP accepted |
 | Mac M1 16GB — resource limit | Can't run all services at once | Stop unused services | Docker Compose |
 | No user authentication | All docs visible to all | Accepted for MVP demo | Phase 2 |
@@ -666,5 +679,23 @@ KnowSeek/
 
 ---
 
+## 18. Data Privacy & Notebook Rules
+
+### 05_data — Never in GitHub
+- All data stays local — never pushed
+- .gitignore protects 05_data/
+
+### Notebook Design Rules
+- No file listings — only summary (count + size)
+- No filenames visible in output
+- Unsupported file types → warning shown early
+- Data path shown — not file content
+
+### Supported File Types
+✅ .pdf .png .webp .jpg .docx .xlsx
+⚠️ everything else → warning at runtime
+
+---
+
 *This document is the single source of truth for all KnowSeek.ai development.*
-*Version: rev05_001 — Last updated: 14.03.2026 — Branch: main_sia05*
+*Version: rev05_002 — Last updated: 17.03.2026 — Branch: main_sia05*

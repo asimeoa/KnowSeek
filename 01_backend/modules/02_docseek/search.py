@@ -4,7 +4,7 @@ search.py — KnowSeek.Ai — DocSeek Module rev05 main_sia05
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴s
 
-Version: rev04_work
+Version: rev05_002
 Branch:  main_sia05
 
 Chapters:
