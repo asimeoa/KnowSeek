@@ -5,7 +5,7 @@ Takes search results from search.py,
 sends them to llama3 via Ollama,
 returns a clean answer with source + confidence.
 
-Version: rev05_002
+Version: rev05_003 21.03.2026 13.47
 Branch:  main_sia05
 
 Chapters:
