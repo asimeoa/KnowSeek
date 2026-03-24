@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev05_003 — Last updated: 22.03.2026 — Branch: main_sia05**
+**Version: rev05_004 — Last updated: 24.03.2026 um 18:32 — Branch: main_sia06**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -159,6 +159,35 @@
 | 25.03 | — | All code clean + commented | Pytest passing |
 | 26.03 | #22 | Full dress rehearsal | 10 min timed |
 | 26.03 | — | GitHub repo final check | All files in place |
+
+
+## Week 3 — Korrekture  + ChromaDB Restructuring (24.03) Issue with chromeDB Architecture
+
+### Completed in main_sia06 ✅
+
+- [ ] Backup ChromaDB — `cp -r chroma_db chroma_db_backup_sia05`
+- [ ] migrate_chromadb.py — "docseek" → "knowseek" + module field
+- [ ] 02_docseek/ingest.py — COLLECTION_NAME + metadata["module"]="docseek"
+- [ ] 02_docseek/search.py — COLLECTION_NAME + where module filter
+- [ ] 02_docseek/answer.py — COLLECTION_NAME update
+- [ ] 01_partseek/search.py — COLLECTION_NAME + where module filter
+- [ ] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
+- [ ] 01_partseek/answer.py — COLLECTION_NAME update
+- [ ] main.py health check — knowseek + chunks per module
+- [ ] EDA Notebook — alle "docseek" → "knowseek" (Ch 1,2,3,4,6)
+- [ ] Verification — curl health + docseek query + partseek query
+- [ ] #16 Frontend mit Backend verbinden
+- [ ] #33 DocSeek 3 OEM comparisons Demo
+- [ ] #34 Risk table correct
+- [ ] #35 Source link clickable
+- [ ] #36 PartSeek text search visualized
+- [ ] #37 Team collision warning
+- [ ] #38 All metadata shown
+- [ ] #27 Technical PPT
+- [ ] Before/After Zeitvergleich — Human 2h vs KnowSeek 3s
+- [ ] ROI Rechnung — 1 day saved per employee per year
+- [ ] #22 Full dress rehearsal 26.03
+- [ ] GitHub repo final check
 
 ### Technical PPT — Slide Structure
 

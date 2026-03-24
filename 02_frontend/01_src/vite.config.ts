@@ -1,3 +1,11 @@
+/**
+ * vite.config.ts - Vite Configuration
+ * 
+ * Version: rev05_004
+ * Branch:  main_sia06
+ * Date:    24.03.2026 08:49
+ */
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -7,7 +15,7 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 8080,
+    port: 8081,
     hmr: {
       overlay: false,
     },

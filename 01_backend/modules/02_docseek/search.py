@@ -1,5 +1,5 @@
 """
-search.py — KnowSeek.Ai — DocSeek Module rev05 main_sia05
+search.py — KnowSeek.Ai — DocSeek Module 
 ─────────────────────────────────────────
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴s
