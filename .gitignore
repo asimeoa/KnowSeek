@@ -1,3 +1,6 @@
+# Version: rev05_005 24.03.2026 19:39
+# Branch:  main_sia07
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -221,4 +224,6 @@ mlruns/
 # Databases & Vector Stores
 chroma_db/
 **/chroma_db/
+
+# Frontend dependencies rev05.005
 02_frontend/01_src/node_modules/
