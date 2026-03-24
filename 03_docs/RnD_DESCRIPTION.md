@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev05_002 — Last updated: 16.03.2026 — Branch: main_sia05*
+*Version: rev05_003 — Last updated: 22.03.2026 15:12 — Branch: main_sia05*
 
 > All data stays local. No cloud. No internet required.
 
@@ -201,13 +201,13 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 ```
 01_backend/modules/
 ├── 02_docseek/
-│   ├── ingest.py       ← load, OCR, chunk, language detect, store in ChromaDB ✅
-│   ├── search.py       ← find relevant chunks in ChromaDB ✅
-│   └── answer.py       ← send chunks to llama3, return answer + source ✅
+│   ├── ingest.py       ✅ load, OCR, chunk, language detect, store in ChromaDB 
+│   ├── search.py       ✅ find relevant chunks in ChromaDB 
+│   └── answer.py       ✅ send chunks to llama3, return answer + source 
 ├── 01_partseek/
-│   ├── ingest.py       ← Phase 2
-│   ├── search.py       ← Phase 2
-│   └── answer.py       ← Phase 2
+│   ├── ingest.py       ✅ rev05_003 — calls DocSeek ingest
+│   ├── search.py       ✅ rev05_003 — filter by Bolts+Torque
+│   └── answer.py       ✅ rev05_003 — structured results + collision warning
 
 06_notebooks/
 ├── EDA.ipynb           ← calls .py files, shows results + charts
@@ -267,6 +267,16 @@ This section documents every tool evaluated — with reliability rating and deci
 > LLaVA (Phase 2) can describe shapes but cannot measure exact geometry.
 > The system will always show a warning when a file type is not fully supported.
 
+> **Info: Anonymization Schema for Test Data**
+> 
+> | Code | Theme | OEM | Kürzel |
+> |------|-------|-----|--------|
+> | OEM-G | US Presidents (GEORGE) | Mercedes-Benz | _PM |
+> | OEM-M | Disney (MICKEY) | GM | _PG |
+> | OEM-Z | Greek Gods (ZEUS) | Volvo | _PV |
+> | OEM-H | Greek Gods (HADES) | Volvo | _PV |
+> | OEM-S | Musicians (SWIFT) | China / Internal | _CH |
+> | _SIA | — | Internal (Antonios) | _SIA |
 #### E2. Language Support
 
 | Model | Size | DE Support | Decision |
@@ -360,7 +370,7 @@ This section documents every tool evaluated — with reliability rating and deci
 |---------|------|--------|-------|
 | Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Running |
 | ChromaDB | 8000 | 🟢 | ✅ Installed + tested |
-| FastAPI Backend | 8001 | 🔜 | Next — Week 2 |
+| FastAPI Backend | 8001 | 🟢 | ✅ Running — DocSeek + PartSeek |
 | React Frontend | 3000 | 🟢 | ✅ Running (dev: 8081) |
 | MLFlow UI | 5000 | 🟢 | ✅ Running |
 | Docker Compose | — | 🔴 | Planned — end of Phase 1 |
@@ -555,14 +565,20 @@ metadata = {
 KnowSeek/
 ├── 01_backend/
 │   ├── modules/
-│   │   ├── 01_partseek/        ← Phase 2
+│   │   ├── 01_partseek/        ✅ rev05_003
+│   │   │   ├── ingest.py       ✅
+│   │   │   ├── search.py       ✅
+│   │   │   └── answer.py       ✅
+│   └── main.py                 ✅ FastAPI all 4 modules
 │   │   ├── 02_docseek/
 │   │   │   ├── ingest.py       ✅ rev05_002
-│   │   │   ├── search.py       ✅ rev05_002
-│   │   │   └── answer.py       ✅ rev05_002
+│   │   │   ├── search.py       ✅ 
+│   │   │   └── answer.py       ✅ 
 │   │   ├── 03_normseek/        ← Phase 2
 │   │   └── 04_costseek/        ← Phase 3
-│   └── main.py
+│   ├──  main.py
+│   └── utils/                  ← shared tools
+│        └── check_pdfs.py
 ├── 02_frontend/
 │   ├── 01_src/                 ← Active React code
 │   ├── 04_KnowSeek_Lovable_Prompt_rev05.md
@@ -631,7 +647,7 @@ KnowSeek/
 
 | Limitation | Impact | Workaround | When Fixed |
 |------------|--------|------------|------------|
-| Geometry from drawings not extractable | Image search limited | Text fields only — warning shown | Phase 2 LLaVA |
+| Geometry from drawings not extractable | Image search limited | Text fields only — warning shown | Phase 2 LLaVA or YOLO  |
 | Scanned PDFs — OCR quality varies | Some docs partially indexed | Warning shown to user | MVP accepted |
 | OCR on technical drawings — partial | Symbols (±, ⌀, °) often missed | Use digital PDFs where possible | MVP accepted |
 | Tables in scanned images — partial | Some table data missed | Use digital PDFs | MVP accepted |
@@ -650,7 +666,7 @@ KnowSeek/
 | Feature | Notes |
 |---------|-------|
 | NormSeek.ai | ISO / OEM norm comparison |
-| LLaVA image search | Photo of part → find in catalog |
+| LLaVA or  YOLO  image search | Photo of part → find in catalog |
 | JT 3D Viewer | three.js + jt-js |
 | Multi-user + auth | Team features |
 | Auto folder watcher | watchdog library |
@@ -691,9 +707,29 @@ KnowSeek/
 - Unsupported file types → warning shown early
 - Data path shown — not file content
 
+### PDF Readability Check — Auto OCR
+
+Before ingest, all PDFs are checked for readable text.
+
+- **Step 1:** Check each PDF — how many chars?
+- **Step 2:** If 0 chars → OCR automatically applied
+- **Step 3:** Check again after OCR
+- **Step 4:** If still 0 chars → file needs YOLO (Phase 2)
+
+Files that cannot be read by OCR:
+
+- Complex technical drawings
+- Low resolution scans
+- Files with only geometry (no text)
+- These are flagged with ⚠️ in the notebook output
+
+This check runs automatically in EDA Chapter 2.2.0
+before ingest.py is called.
+
 ### Supported File Types
 ✅ .pdf .png .webp .jpg .docx .xlsx
 ⚠️ everything else → warning at runtime
+
 
 ---
 

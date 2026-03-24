@@ -1,127 +1,206 @@
 """
-answer.py — PartSeek Module
-────────────────────────────────────────
-Generate answers for part queries using llama3.
+answer.py — KnowSeek.Ai — PartSeek Module
+─────────────────────────────────────────
+Returns structured part results.
+No LLM needed — direct metadata display.
 
-Version: rev06_001 24.03.2026 16:22
-Branch:  main_sia06
-Date:    24.03.2026
+Version: rev05_003
+Branch:  main_sia05
+
+Chapters:
+    1. Imports
+    2. Config
+    3. Helper Functions
+        3.1 format_answer()
+        3.2 check_collision()
+    4. Main Functions
+        4.1 find_part()
+        4.2 find_part_with_filter()
+    5. Run
 """
 
+
+# ─────────────────────────────────────────────────────
+# 1. IMPORTS
+# ─────────────────────────────────────────────────────
+
+import sys
 import time
-import requests
-from search import search_parts
+from pathlib import Path
+
+sys.path.append(str(Path(__file__).parent))
+from search import search_part, search_part_with_filter
 
 
 # ─────────────────────────────────────────────────────
-# CONFIG
+# 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3"
+COLLISION_THRESHOLD = 0.85   # Score above this = possible duplicate
 
 
 # ─────────────────────────────────────────────────────
-# ASK - Main function
+# 3. HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────
 
-def ask(question: str, n_results: int = 5, verbose: bool = False):
+# 3.1 format_answer
+def format_answer(query: str, results: list[dict], elapsed_ms: float) -> dict:
     """
-    Ask a question about parts and get an answer
-    
-    Args:
-        question: User question (e.g., "I need M8 screw 25mm torx")
-        n_results: How many parts to search
-        verbose: Print debug info
-    
-    Returns:
-        dict with answer, parts, and metadata
+    Format PartSeek results into clean response.
+    No LLM — direct structured data.
     """
-    start_time = time.time()
-    
-    # Step 1: Search for parts
-    search_result = search_parts(question, n_results=n_results, verbose=verbose)
-    parts = search_result["results"]
-    
-    if not parts:
+    if not results:
         return {
-            "question": question,
-            "answer": "No matching parts found in database.",
-            "found": False,
-            "parts": [],
-            "time_ms": round((time.time() - start_time) * 1000, 1)
+            "query":   query,
+            "found":   False,
+            "message": "No parts found. Try different search terms.",
+            "results": [],
+            "time_ms": elapsed_ms,
         }
-    
-    # Step 2: Build context for llama3
-    context = "Available parts:\n\n"
-    for i, part in enumerate(parts, 1):
-        meta = part["metadata"]
-        context += f"Part {i}:\n"
-        context += f"  Text: {part['text'][:200]}\n"
-        context += f"  OEM: {meta.get('oem_code', 'N/A')}\n"
-        context += f"  Category: {meta.get('category', 'N/A')}\n"
-        context += f"  Score: {part['score']:.3f}\n\n"
-    
-    # Step 3: Build prompt
-    prompt = f"""You are a helpful engineering assistant for finding parts.
 
-Question: {question}
+    top = results[0]
 
-{context}
-
-Based on the parts above, answer the question.
-Include:
-- Which part(s) match best
-- Key specifications
-- OEM codes
-- Any important notes
-
-Keep your answer clear and concise."""
-    
-    # Step 4: Call llama3
-    if verbose:
-        print(f"Calling llama3...")
-    
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False
-        },
-        timeout=30
-    )
-    
-    if response.status_code != 200:
-        return {
-            "question": question,
-            "answer": f"Error calling llama3: {response.status_code}",
-            "found": False,
-            "parts": [],
-            "time_ms": round((time.time() - start_time) * 1000, 1)
-        }
-    
-    answer_text = response.json().get("response", "No answer generated")
-    
-    # Step 5: Format response
-    elapsed_ms = round((time.time() - start_time) * 1000, 1)
-    
-    # Format parts for output
-    formatted_parts = []
-    for part in parts:
-        meta = part["metadata"]
-        formatted_parts.append({
-            "text": part["text"][:300],
-            "oem_code": meta.get("oem_code", "UNKNOWN"),
-            "category": meta.get("category", "N/A"),
-            "score": part["score"],
-            "filename": meta.get("filename", "N/A")
-        })
-    
     return {
-        "question": question,
-        "answer": answer_text,
-        "found": True,
-        "parts": formatted_parts,
-        "time_ms": elapsed_ms
+        "query":      query,
+        "found":      True,
+        "confidence": top["score"],
+        "signal":     top["signal"],
+        "signal_icon": {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(top["signal"], "⚪"),
+        "results":    results,
+        "time_ms":    elapsed_ms,
     }
+
+
+# 3.2 check_collision
+def check_collision(results: list[dict]) -> dict:
+    """
+    Check if a similar part already exists.
+    Returns warning if score > COLLISION_THRESHOLD.
+
+    This is the Team Collision Warning feature:
+    "A colleague recently searched for a similar part."
+    """
+    if not results:
+        return {"collision": False}
+
+    top = results[0]
+    if top["score"] >= COLLISION_THRESHOLD:
+        return {
+            "collision": True,
+            "message":   "⚠️ A similar part already exists. Check before creating a new one.",
+            "score":     top["score"],
+            "oem_code":  top["oem_code"],
+        }
+    return {"collision": False}
+
+
+# ─────────────────────────────────────────────────────
+# 4. MAIN FUNCTIONS
+# ─────────────────────────────────────────────────────
+
+# 4.1 find_part
+def find_part(
+    query: str,
+    verbose: bool = True
+) -> dict:
+    """
+    Find parts matching the query.
+    Returns structured list — no LLM.
+
+    Usage:
+        result = find_part("M8 Torx screw 10.9")
+        result = find_part("Flanschschraube verzinkt")
+    """
+    start = time.time()
+    results = search_part(query, verbose=False)
+    elapsed = round((time.time() - start) * 1000, 1)
+
+    answer = format_answer(query, results, elapsed)
+    collision = check_collision(results)
+
+    if verbose:
+        print(f"Query:    {query}")
+        print(f"Found:    {len(results)} parts")
+        print(f"Time:     {elapsed}ms")
+        print()
+
+        for r in results:
+            icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
+            print(f"  {icon} Score: {r['score']:.3f} — OEM: {r['oem_code']} ({r['oem_real'] or '?'})")
+            if r["thread_size"]:    print(f"     Thread:        {r['thread_size']}")
+            if r["strength_class"]: print(f"     Strength:      {r['strength_class']}")
+            if r["drive_type"]:     print(f"     Drive:         {r['drive_type']}")
+            if r["coating"]:        print(f"     Coating:       {r['coating']}")
+            if r["norm"]:           print(f"     Norm:          {r['norm']}")
+            if r["self_locking"]:   print(f"     Self-locking:  Yes")
+            print()
+
+        if collision["collision"]:
+            print(collision["message"])
+
+    return {**answer, "collision": collision}
+
+
+# 4.2 find_part_with_filter
+def find_part_with_filter(
+    query: str,
+    oem_code: str = None,
+    thread_size: str = None,
+    verbose: bool = True
+) -> dict:
+    """
+    Find parts with specific filters.
+
+    Usage:
+        result = find_part_with_filter("screw", oem_code="OEM-V")
+        result = find_part_with_filter("coating", thread_size="M8")
+    """
+    start = time.time()
+    results = search_part_with_filter(
+        query,
+        oem_code=oem_code,
+        thread_size=thread_size,
+        verbose=False
+    )
+    elapsed = round((time.time() - start) * 1000, 1)
+
+    answer = format_answer(query, results, elapsed)
+    collision = check_collision(results)
+
+    if verbose:
+        print(f"Query:    {query}")
+        print(f"Filter:   oem={oem_code or 'all'} thread={thread_size or 'all'}")
+        print(f"Found:    {len(results)} parts")
+        print(f"Time:     {elapsed}ms")
+        print()
+
+        for r in results:
+            icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
+            print(f"  {icon} {r['oem_code']} | {r['thread_size']} | {r['strength_class']} | {r['drive_type']}")
+
+        if collision["collision"]:
+            print(collision["message"])
+
+    return {**answer, "collision": collision}
+
+
+# ─────────────────────────────────────────────────────
+# 5. RUN
+# ─────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+
+    print("=" * 50)
+    print("TEST 1 — Find Part")
+    print("=" * 50)
+    result = find_part("M8 Torx screw steel 10.9")
+
+    print("=" * 50)
+    print("TEST 2 — Find with OEM Filter")
+    print("=" * 50)
+    result = find_part_with_filter("flange screw", oem_code="OEM-V")
+
+    print("=" * 50)
+    print("TEST 3 — Collision Check")
+    print("=" * 50)
+    result = find_part("DIN 34802 screw")

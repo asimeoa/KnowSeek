@@ -1,7 +1,7 @@
-# KnowSeek.Ai 🧠
+# KnowSeek.Ai 
 > **Stop searching. Start knowing.**
 
-**Version: rev05_002 — Last updated: 16.03.2026 — Branch: main_sia05**
+**Version:** rev05_003 22.03.2026  - **Branch:** main_sia05
 
 KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
@@ -50,6 +50,8 @@ Shows the cost impact of design decisions while you are still in the development
 | Embedding | nomic-embed-text via Ollama (DE + EN) |
 | Vector DB | ChromaDB |
 | RAG | LangChain |
+| OCR | pytesseract + Pillow + fpdf2 |
+| Backend API | FastAPI (Python 3.11.3) — port 8001 |
 | Experiment Tracking | MLFlow (local, port 5000) |
 | DevOps | Git, GitHub, gh CLI |
 
@@ -58,7 +60,6 @@ Shows the cost impact of design decisions while you are still in the development
 ### Planned
 | Layer | Technology |
 |-------|------------|
-| Backend API | FastAPI (Python 3.11.3) |
 | Image Search | LLaVA via Ollama *(try for 27.03)* |
 | Infrastructure | Docker Compose |
 | Testing | Pytest |
@@ -124,11 +125,18 @@ mlflow ui
 
 Open in browser: `http://127.0.0.1:5000`
 
-* Start FastAPI Backend *(coming soon)*:
-
+* Start FastAPI Backend:
 ```bash
-uvicorn main:app --reload --port 8001
+cd 01_backend
+python main.py
 ```
+
+Open in browser: `http://localhost:8001/docs`
+
+
+
+
+
 
 ---
 
@@ -181,11 +189,13 @@ mlflow ui
 
 Open in browser: `http://127.0.0.1:5000`
 
-* Start FastAPI Backend *(coming soon)*:
-
+* Start FastAPI Backend:
 ```bash
-uvicorn main:app --reload --port 8001
+cd 01_backend
+python main.py
 ```
+
+Open in browser: `http://localhost:8001/docs`
 
 ---
 
@@ -226,11 +236,13 @@ mlflow ui
 
 Open in browser: `http://127.0.0.1:5000`
 
-* Start FastAPI Backend *(coming soon)*:
-
+* Start FastAPI Backend:
 ```bash
-uvicorn main:app --reload --port 8001
+cd 01_backend
+python main.py
 ```
+
+Open in browser: `http://localhost:8001/docs`
 
 ---
 
@@ -239,13 +251,15 @@ uvicorn main:app --reload --port 8001
 > ⚠️ The `05_data/` folder is not included in this repo (IP protection).
 
 Put your files here before running the notebook:
-
 ```
 05_data/
 ├── 01_Fasteners/     ← part datasheets (PDF)
 ├── 02_Specifikation/ ← OEM specification PDFs
 └── 03_Painting/      ← paint standard PDFs
 ```
+
+- Phase 2: add `04_Norms/` for NormSeek
+- Phase 3: add `05_Cost/` for CostSeek
 
 Supported file types: `.pdf` `.png` `.webp` `.jpg` `.docx` `.xlsx`
 
@@ -267,11 +281,17 @@ python 01_backend/modules/02_docseek/ingest.py
 | ChromaDB | 1.5.5 | ✅ Installed |
 | rank-bm25 | 0.2.2 | ✅ Installed |
 | MLFlow | 3.10.1 | ✅ Running |
-| ingest.py (DocSeek) | rev05_002 | ✅ Done — 59 chunks, 15 docs |
-| search.py (DocSeek) | rev05_002 | ✅ Done — 4 categories |
-| answer.py (DocSeek) | rev05_002 | ✅ Done — RAG + OEM comparison |
-| EDA Notebook | rev05_work | 🔜 Chapter 3 done — Chapter 6 next |
-| FastAPI Backend | — | 🔜 Week 2 |
+| ingest.py (DocSeek) | rev05_003 | ✅ Done — 121 chunks, 39 docs |
+| search.py (DocSeek) | rev05_003 | ✅ Done — 4 categories |
+| answer.py (DocSeek) | rev05_003 | ✅ Done — RAG + OEM comparison |
+| check_pdfs.py | rev05_003 | ✅ Done — auto OCR pipeline |
+| ingest.py (PartSeek) | rev05_003 | ✅ Done |
+| search.py (PartSeek) | rev05_003 | ✅ Done — filter + collision warning |
+| answer.py (PartSeek) | rev05_003 | ✅ Done |
+| FastAPI main.py | rev05_003 | ✅ Running — port 8001 |
+| EDA Notebook | rev05_003 | ✅ Done — Chapter 1-6 |
+| Technical PPT | — | 🔜 Week 3 |
+| Stakeholder PPT | — | 🔜 Week 4 |
 
 ---
 

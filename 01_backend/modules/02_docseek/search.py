@@ -4,8 +4,8 @@ search.py — KnowSeek.Ai — DocSeek Module
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴s
 
-Version: rev05_004 24.03.2026 12:11
-Branch:  main_sia06 
+Version: rev05_003 21.03.2026 13.47
+Branch:  main_sia05
 
 Chapters:
     1. Imports
@@ -37,8 +37,7 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-BASE_PATH = Path(__file__).resolve().parents[3]
-DB_PATH = str(BASE_PATH / "chroma_db")
+DB_PATH = str(Path(__file__).resolve().parents[3] / "chroma_db")
 COLLECTION_NAME = "docseek"
 N_RESULTS       = 5       # how many chunks to return per query
 
