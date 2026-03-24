@@ -221,3 +221,4 @@ mlruns/
 # Databases & Vector Stores
 chroma_db/
 **/chroma_db/
+02_frontend/01_src/node_modules/
