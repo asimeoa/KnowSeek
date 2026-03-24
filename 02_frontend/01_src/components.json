@@ -1,3 +1,5 @@
+# Components configuration rev05_004 date 23.03.2026 18:50 
+#  bransh main_sia06
 {
   "$schema": "https://ui.shadcn.com/schema.json",
   "style": "default",

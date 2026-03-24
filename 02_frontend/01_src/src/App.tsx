@@ -1,3 +1,13 @@
+/**
+ * App.tsx - KnowSeek.Ai Main Application
+ * 
+ * This file contains the main application component
+ * 
+ * Version: rev05_004
+ * Branch:  main_sia06
+ * Date:    23.03.2026 19:10
+ */
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";

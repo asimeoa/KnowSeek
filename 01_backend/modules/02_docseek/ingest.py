@@ -4,8 +4,8 @@ ingest.py — KnowSeek.Ai — DocSeek Module
 Loads PDF files, splits them into chunks,
 adds metadata, and stores everything in ChromaDB.
 
-Version: rev05_002
-Branch:  main_sia05
+VVersion: rev05_004 24.03.2026 12:12
+Branch:  main_sia06 
 
 Chapters:
     1. Imports
@@ -52,8 +52,8 @@ CHUNK_CONFIGS = {
 }
 
 DEFAULT_CONFIG = "medium"
-DB_PATH        = "./chroma_db"
-BASE_PATH = Path(__file__).resolve().parents[3] # Automatic find File location and set base path 
+BASE_PATH = Path(__file__).resolve().parents[3]  # Find project root
+DB_PATH = str(BASE_PATH / "chroma_db")           # Use BASE_PATH!
 DATA_PATH = BASE_PATH / "05_data"
 
 # ─────────────────────────────────────────────────────

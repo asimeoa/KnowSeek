@@ -1,11 +1,11 @@
 """
-search.py — KnowSeek.Ai — DocSeek Module rev05 main_sia05
+search.py — KnowSeek.Ai — DocSeek Module 
 ─────────────────────────────────────────
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴s
 
-Version: rev05_002
-Branch:  main_sia05
+Version: rev05_004 24.03.2026 12:11
+Branch:  main_sia06 
 
 Chapters:
     1. Imports
@@ -37,7 +37,8 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-DB_PATH         = "./chroma_db"
+BASE_PATH = Path(__file__).resolve().parents[3]
+DB_PATH = str(BASE_PATH / "chroma_db")
 COLLECTION_NAME = "docseek"
 N_RESULTS       = 5       # how many chunks to return per query
 
