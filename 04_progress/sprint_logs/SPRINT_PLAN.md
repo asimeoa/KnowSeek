@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev05_004 — Last updated: 24.03.2026 um 18:32 — Branch: main_sia06**
+**Version: rev05_005 — Last updated: 26.03.2026 um 10:14 — Branch: main_sia07**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -173,7 +173,7 @@
 - [x] 01_partseek/search.py — COLLECTION_NAME + where module filter
 - [x] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
 - [x] 01_partseek/answer.py — COLLECTION_NAME update
-- [ ] main.py health check — knowseek + chunks per module
+- [x] main.py health check — knowseek + chunks per module ✅
 - [ ] EDA Notebook — alle "docseek" → "knowseek" (Ch 1,2,3,4,6)
 - [ ] Verification — curl health + docseek query + partseek query
 - [ ] #16 Frontend mit Backend verbinden
@@ -188,6 +188,17 @@
 - [ ] ROI Rechnung — 1 day saved per employee per year
 - [ ] #22 Full dress rehearsal 26.03
 - [ ] GitHub repo final check
+
+
+### New Issues 26.03 — main_sia07 🔜
+
+| Issue | Task | Status |
+|-------|------|--------|
+| #53 | Hybrid Search BM25 + Domain Filter — DocSeek search.py rev06_002 | 🔜 In Progress |
+| #54 | EDA Chapter 6.3 — Hybrid Search confidence visualization | 🔜 Backlog |
+| #55 | DocSeekView connected to real API | 🔜 In Progress |
+| #56 | feat: YOLO/LLaVA image search for PartSeek — Phase 2 | 🔜 Backlog |
+| #57 | setup: Install LLaVA — ollama pull llava | 🔜 Backlog |
 
 ### Technical PPT — Slide Structure
 
@@ -248,17 +259,17 @@
 | MLFlow | 3.10.1 | ✅ Running — BM25 + RAG logged |
 | 05_data | — | ✅ 39 docs / 121 chunks / 4 categories |
 | ingest.py (DocSeek) | rev05_003 | ✅ Done — OCR + language detect |
-| search.py (DocSeek) | rev05_003 | ✅ Done — filter + confidence score |
+| search.py (DocSeek) | rev06_001 | ✅ Done — filter + confidence + COLLECTION_NAME=knowseek |
 | answer.py (DocSeek) | rev05_003 | ✅ Done — RAG + OEM comparison |
 | check_pdfs.py | rev05_003 | ✅ Done — auto OCR pipeline |
 | ingest.py (PartSeek) | rev05_003 | ✅ Done — calls DocSeek ingest |
 | search.py (PartSeek) | rev05_003 | ✅ Done — Bolts+Torque filter |
 | answer.py (PartSeek) | rev05_003 | ✅ Done — structured results + collision |
-| FastAPI main.py | rev05_003 | ✅ Running — port 8001 |
+| FastAPI main.py | rev05_004 | ✅ Running — port 8001 — knowseek health check ✅ |
 | EDA Notebook | rev05_003 | ✅ Chapter 1-6 complete |
 | Midterm PPT | rev05_003 | ✅ Delivered 20.03.2026 |
-| Technical PPT | — | 🔜 main_sia06 |
-| Stakeholder PPT | — | 🔜 main_sia06 |
+| Technical PPT | — | 🔜 main_sia07 |
+| Stakeholder PPT | — | 🔜 main_sia07 |
 | RnD_DESCRIPTION.md | rev05_003 | ✅ Done |
 | README.md | rev05_003 | ✅ Done |
 | requirements.txt | rev05_003 | ✅ Done |
@@ -320,4 +331,4 @@ gh issue edit <number> --remove-label "labelname"
 ---
 
 *Save in: `04_progress/sprint_logs/SPRINT_PLAN.md`*
-*Version: rev05_003 — Last updated: 22.03.2026 — Branch: main_sia05*
+*Version: rev05_005 — Last updated: 26.03.2026 — Branch: main_sia07*
