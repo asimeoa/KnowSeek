@@ -1,11 +1,12 @@
+
 """
 ingest.py — KnowSeek.Ai — DocSeek Module
 ─────────────────────────────────────────
 Loads PDF files, splits them into chunks,
 adds metadata, and stores everything in ChromaDB.
 
-Version: rev05_003 21.03.2026 14:08
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 00:15
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -14,9 +15,11 @@ Chapters:
     4. Helper Functions
         4.1 get_oem_code()
         4.2 get_category()
-        4.3 get_doc_type()
-        4.4 get_chunk_config()
-        4.5 make_source_id()
+        4.3 get_module()
+        4.4 get_doc_type()
+        4.5 get_chunk_config()
+        4.6 make_source_id()
+        4.7 get_language()
     5. Main Functions
         5.1 extract_text_from_pdf()
         5.2 chunk_pages()
@@ -26,7 +29,6 @@ Chapters:
         5.6 run_ingest()
     6. Run
 """
-
 
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
@@ -41,6 +43,7 @@ import chromadb
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 
+
 # ─────────────────────────────────────────────────────
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
@@ -51,41 +54,70 @@ CHUNK_CONFIGS = {
     "large":  {"chunk_size": 1000, "chunk_overlap": 200},  # Experiment 3
 }
 
-DEFAULT_CONFIG = "medium"
-DB_PATH = str(Path(__file__).resolve().parents[3] / "chroma_db")
-BASE_PATH = Path(__file__).resolve().parents[3] # Automatic find File location and set base path 
+DEFAULT_CONFIG    = "medium"
+COLLECTION_NAME   = "knowseek"   # ONE collection for all modules
+
+# Auto-detect paths — works from anywhere
+BASE_PATH = Path(__file__).resolve().parents[3]
+DB_PATH   = str(BASE_PATH / "chroma_db")
 DATA_PATH = BASE_PATH / "05_data"
+
 
 # ─────────────────────────────────────────────────────
 # 3. MAPPING
 # ─────────────────────────────────────────────────────
 
 OEM_MAP = {
-    "GEORGE": "OEM-G",
-    "MICKEY": "OEM-M",
-    "ZEUS":   "OEM-Z",
-    "HADES":  "OEM-H",
-    "SWIFT":  "OEM-S",
-    "MBN":    "OEM-B",
+    "GEORGE": "OEM-G",   # Mercedes-Benz — US Presidents theme
+    "MICKEY": "OEM-M",   # GM            — Disney theme
+    "ZEUS":   "OEM-Z",   # Volvo         — Greek Gods theme
+    "HADES":  "OEM-H",   # Volvo         — Greek Gods theme
+    "SWIFT":  "OEM-S",   # China/Internal — Musicians theme
+    "MBN":    "OEM-B",   # Mercedes-Benz Norm
 }
 
 CATEGORY_MAP = {
+    # OEM Fastener Norms — standards from OEMs
+    "mbn":       "OEM-Fastener",
+    "din":       "OEM-Fastener",
+    "iso":       "OEM-Fastener",
+
+    # Supplier Fastener Datasheets — parts from suppliers
+    "screw":     "Supplier-Fastener",
+    "bolt":      "Supplier-Fastener",
+    "nut":       "Supplier-Fastener",
+    "washer":    "Supplier-Fastener",
+    "torx":      "Supplier-Fastener",
+    "hex":       "Supplier-Fastener",
+    "flange":    "Supplier-Fastener",
+    "rivet":     "Supplier-Fastener",
+
+    # Brackets — holders, clips, angles
+    "bracket":   "Bracket",
+    "winkel":    "Bracket",
+    "clip":      "Bracket",
+    "clamp":     "Bracket",
+    "halter":    "Bracket",
+
+    # Corrosion — OEM specs and test standards
     "corrosion": "Corrosion",
     "aging":     "Corrosion",
+    "ktl":       "Corrosion",
+    "crash":     "Corrosion",
+
+    # Painting — coating and surface treatment
     "paint":     "Painting",
     "coating":   "Painting",
     "e-coat":    "Painting",
-    "screw":     "Bolts+Torque",
-    "bolt":      "Bolts+Torque",
-    "flange":    "Bolts+Torque",
-    "torx":      "Bolts+Torque",
-    "hex":       "Bolts+Torque",
-    "nut":       "Bolts+Torque",
-    "din":       "Bolts+Torque",
-    "mbn":       "Bolts+Torque",
-    "interior":  "Dimensions",
-    "structure": "Dimensions",
+    "zink":      "Painting",
 }
+
+# Categories that belong to PartSeek module
+PART_CATEGORIES = [
+    "OEM-Fastener",
+    "Supplier-Fastener",
+    "Bracket",
+]
 
 
 # ─────────────────────────────────────────────────────
@@ -112,7 +144,17 @@ def get_category(filename: str) -> str:
     return "General"
 
 
-# 4.3 get_doc_type
+# 4.3 get_module
+def get_module(category: str) -> str:
+    """
+    Assign module based on category.
+    PartSeek categories → module="partseek"
+    All others         → module="docseek"
+    """
+    return "partseek" if category in PART_CATEGORIES else "docseek"
+
+
+# 4.4 get_doc_type
 def get_doc_type(pages: int) -> str:
     """Detect document type based on page count."""
     if pages <= 2:
@@ -125,7 +167,7 @@ def get_doc_type(pages: int) -> str:
         return "Lastenheft"
 
 
-# 4.4 get_chunk_config
+# 4.5 get_chunk_config
 def get_chunk_config(pages: int) -> dict:
     """Select chunk config based on document size."""
     if pages <= 2:
@@ -136,14 +178,14 @@ def get_chunk_config(pages: int) -> dict:
         return CHUNK_CONFIGS["large"]
 
 
-# 4.5 make_source_id
+# 4.6 make_source_id
 def make_source_id(filename: str, page: int, chunk_index: int) -> str:
     """Create a unique source ID for each chunk."""
     raw = f"{filename}_{page}_{chunk_index}"
     return "#" + hashlib.md5(raw.encode()).hexdigest()[:6].upper()
 
 
-# 4.6 get_language
+# 4.7 get_language
 def get_language(text: str) -> str:
     """
     Detect language from text.
@@ -215,13 +257,15 @@ def build_metadata(filename: str, page: int, chunk_index: int,
     Build the metadata dict for a single chunk.
     Anti-hallucination schema — RnD_DESCRIPTION.md Section 12.
     """
+    category = get_category(filename)
     return {
         "source_id":    make_source_id(filename, page, chunk_index),
         "filename":     filename,
         "page":         page,
         "chunk_index":  chunk_index,
         "oem_code":     get_oem_code(filename),
-        "category":     get_category(filename),
+        "category":     category,
+        "module":       get_module(category),
         "doc_type":     get_doc_type(total_pages),
         "language":     get_language(text),
         "verified":     True,
@@ -274,7 +318,7 @@ def load_and_chunk(
                 total_pages=total_pages,
                 config_name=config_name,
                 text=chunk["text"]
-        )
+            )
             all_chunks.append({
                 "text":     chunk["text"],
                 "metadata": metadata
@@ -302,7 +346,7 @@ def load_and_chunk(
 # 5.5 store_in_chromadb
 def store_in_chromadb(
     chunks: list[dict],
-    collection_name: str = "docseek",
+    collection_name: str = COLLECTION_NAME,
     db_path: str = DB_PATH,
     verbose: bool = True
 ) -> chromadb.Collection:
@@ -310,7 +354,7 @@ def store_in_chromadb(
     Store all chunks in ChromaDB.
 
     Usage:
-        chunks     = load_and_chunk()
+        chunks, _ = load_and_chunk()
         collection = store_in_chromadb(chunks)
     """
     Path(db_path).mkdir(exist_ok=True)
@@ -324,14 +368,14 @@ def store_in_chromadb(
         pass
 
     ollama_ef = OllamaEmbeddingFunction(
-    url="http://localhost:11434/api/embeddings",
-    model_name="nomic-embed-text"
+        url="http://localhost:11434/api/embeddings",
+        model_name="nomic-embed-text"
     )
 
     collection = client.create_collection(
-    name=collection_name,
-    embedding_function=ollama_ef,
-    metadata={"hnsw:space": "cosine"}
+        name=collection_name,
+        embedding_function=ollama_ef,
+        metadata={"hnsw:space": "cosine"}
     )
 
     batch_size = 100
@@ -353,7 +397,7 @@ def store_in_chromadb(
 def run_ingest(
     data_path: Path = DATA_PATH,
     config_name: str = DEFAULT_CONFIG,
-    collection_name: str = "docseek"
+    collection_name: str = COLLECTION_NAME
 ) -> dict:
     """
     Full ingest pipeline — load, chunk, store.
@@ -363,26 +407,40 @@ def run_ingest(
         summary = run_ingest()
         summary = run_ingest(config_name="large")
     """
-    start  = time.time()
-    chunks, skipped = load_and_chunk(data_path=data_path, config_name=config_name, verbose=False)
-    store_in_chromadb(chunks, collection_name=collection_name, verbose=False)# verbose=False to reduce console output not File names visible in console output
+    start = time.time()
+    chunks, skipped = load_and_chunk(
+        data_path=data_path,
+        config_name=config_name,
+        verbose=False
+    )
+    store_in_chromadb(
+        chunks,
+        collection_name=collection_name,
+        verbose=False
+    )
     elapsed = round(time.time() - start, 2)
     config  = CHUNK_CONFIGS[config_name]
 
+    # Count by module
+    docseek_count  = sum(1 for c in chunks if c["metadata"].get("module") == "docseek")
+    partseek_count = sum(1 for c in chunks if c["metadata"].get("module") == "partseek")
+
     summary = {
-        "config_name":   config_name,
-        "chunk_size":    config["chunk_size"],
-        "chunk_overlap": config["chunk_overlap"],
-        "total_chunks":  len(chunks),
-        "total_docs":    len(set(c["metadata"]["filename"] for c in chunks)),
-        "ingest_time_s": elapsed,
-        "collection":    collection_name
+        "config_name":    config_name,
+        "chunk_size":     config["chunk_size"],
+        "chunk_overlap":  config["chunk_overlap"],
+        "total_chunks":   len(chunks),
+        "docseek_chunks": docseek_count,
+        "partseek_chunks": partseek_count,
+        "total_docs":     len(set(c["metadata"]["filename"] for c in chunks)),
+        "ingest_time_s":  elapsed,
+        "collection":     collection_name
     }
 
     print()
     print("─── Ingest Summary ───────────────────")
     for k, v in summary.items():
-        print(f"  {k:<20} {v}")
+        print(f"  {k:<22} {v}")
     print("──────────────────────────────────────")
 
     if skipped:

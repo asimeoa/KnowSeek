@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev05_003 — Last updated: 22.03.2026 15:12 — Branch: main_sia05*
+*Version: rev06_001 — Last updated: 25.03.2026 09:14 — Branch: main_sia07*
 
 > All data stays local. No cloud. No internet required.
 
@@ -14,9 +14,9 @@
 | 01 | **DocSeek.ai** | Emerald Green #10B981 | ✅ MVP |
 | 02 | **PartSeek.ai** | Electric Blue #0EA5E9 | ✅ MVP |
 | 03 | **NormSeek.ai** | Indigo #9199F4 | ⏳ Phase 2 |
-| 04 | **CostSeek.ai** | Orange #FC9D57 | ⏳ Phase 2 |
+| 04 | **CostSeek.ai** | Orange #FC9D57 | ⏳ Phase 3 |
 
-**Midterm: 20.03.2026 · Dry Run: 27.03.2026 · Stakeholder: 02.04.2026**
+**Midterm: 20.03.2026 ✅ · Dry Run: 27.03.2026 · Stakeholder: 02.04.2026**
 **Solo developer · On-Premise / Ollama**
 
 ---
@@ -121,11 +121,12 @@ This means the AI does not guess — it reads your actual documents and tells yo
 **FastAPI connects the AI backend to the React frontend:**
 
 ```
-React Frontend  →  FastAPI  →  LangChain → ChromaDB → llama3
-(JavaScript)       (Python)
+React Frontend  →  FastAPI  →  ChromaDB → llama3
+(JavaScript)       (Python)    (vectors)  (answers)
 
-POST /api/docseek/query  ←  question
-GET  /api/health         ←  server status check
+POST /api/docseek/query   ← document question
+POST /api/partseek/query  ← part search
+GET  /api/health          ← server status check
 ```
 
 ---
@@ -176,12 +177,16 @@ We evaluated 5 models before deciding:
 
 | Model | Type | Decision | Notes |
 |-------|------|----------|-------|
-| LLaVA (Ollama) | Vision LLM — describes images in text | 🟡 Try for 27.03 | No training needed, slower |
-| YOLO (Ultralytics) | Object detection — finds + classifies parts | 🔴 Phase 2 | Needs ~500 labeled images, training ~5h |
+| LLaVA (Ollama) | Vision LLM — describes images in text | 🟡 Phase 2 | No training needed — start with 10 images |
+| YOLO (Ultralytics) | Object detection — finds + classifies parts | 🟡 Phase 2 | Can start with 10 images, improve over time |
 
-> YOLO requires training data (~500 labeled images per class).
-> Dataset source: Roboflow Universe — pre-labeled fastener datasets available.
-> If time allows before 27.03 — LLaVA will be tested first as no training is needed.
+> **YOLO strategy — incremental approach:**
+> - Start with 10 images → Proof of Concept
+> - Add 50 images → Better recognition
+> - Add 500 images → Production ready
+> - Dataset source: Roboflow Universe — pre-labeled fastener datasets available
+> - ChromaDB architecture already supports image chunks — no restructuring needed
+> - Image chunks get module="partseek" + doc_type="Image"
 
 ### Visualization Tools (Notebooks)
 
@@ -199,26 +204,41 @@ We evaluated 5 models before deciding:
 All production logic lives in `.py` files. Notebooks call these files and are only used for visualization and EDA.
 
 ```
-01_backend/modules/
-├── 02_docseek/
-│   ├── ingest.py       ✅ load, OCR, chunk, language detect, store in ChromaDB 
-│   ├── search.py       ✅ find relevant chunks in ChromaDB 
-│   └── answer.py       ✅ send chunks to llama3, return answer + source 
-├── 01_partseek/
-│   ├── ingest.py       ✅ rev05_003 — calls DocSeek ingest
-│   ├── search.py       ✅ rev05_003 — filter by Bolts+Torque
-│   └── answer.py       ✅ rev05_003 — structured results + collision warning
+01_backend/
+├── main.py             ✅ rev06_001 — FastAPI all 4 modules (port 8001)
+├── modules/
+│   ├── 01_partseek/
+│   │   ├── ingest.py   ✅ rev06_001 — calls DocSeek ingest pipeline
+│   │   ├── search.py   ✅ rev06_001 — filter by module="partseek"
+│   │   └── answer.py   ✅ rev06_001 — structured results + collision warning
+│   ├── 02_docseek/
+│   │   ├── ingest.py   ✅ rev06_001 — load, OCR, chunk, module tag, store
+│   │   ├── search.py   ✅ rev06_001 — filter by module="docseek"
+│   │   └── answer.py   ✅ rev06_001 — RAG + llama3 + OEM comparison
+│   ├── 03_normseek/    ⏳ Phase 2
+│   └── 04_costseek/    ⏳ Phase 3
+└── utils/
+    └── check_pdfs.py   ✅ rev06_001 — auto OCR check for all modules
 
 06_notebooks/
-├── EDA.ipynb           ← calls .py files, shows results + charts
-└── knowseek_prototype.ipynb
+└── EDA.ipynb           ✅ rev06_001 — Chapter 1-6 complete
 ```
 
-**Key functions in ingest.py:**
+**Key functions in DocSeek ingest.py:**
 - `get_language(text)` — detects DE vs EN automatically
-- `get_category(filename)` — maps filename to category (Corrosion / Painting / Bolts+Torque)
+- `get_category(filename)` — maps filename to category
+- `get_module(category)` — assigns module based on category
 - `get_oem_code(filename)` — maps filename to OEM code
 - `run_ingest()` — full pipeline: load → chunk → vectorize → store
+
+**Category → Module mapping:**
+```python
+# PartSeek categories:
+OEM-Fastener, Supplier-Fastener, Bracket → module="partseek"
+
+# DocSeek categories (everything else):
+Corrosion, Painting, General → module="docseek"
+```
 
 > The notebook is the **window** — the .py files are the **engine**.
 
@@ -231,8 +251,6 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 | E | Eingabe | Input |
 | V | Verarbeitung | Processing |
 | A | Ausgabe | Output |
-
-This section documents every tool evaluated — with reliability rating and decision.
 
 **Rating:**
 
@@ -259,6 +277,7 @@ This section documents every tool evaluated — with reliability rating and deci
 | Excel (.xlsx) | LangChain + openpyxl | 🟢 | Requirements lists, test tables |
 | Images with tables | pdfplumber | 🟡 | Digital PDFs only — not scanned |
 | CAD drawings (DXF/DWG) | PyMuPDF | 🟡 | Text fields only — no geometry |
+| Part images (YOLO)* | YOLO / LLaVA | 🟡 | Phase 2 — start with 10 images |
 | Email (.msg/.pst) | extract-msg* | 🔴 | Phase 2 — use PDF export for MVP |
 | CAD metadata (NX) | NX Open API** | 🔴 | Phase 3 |
 | JT 3D files | jt-js + three.js* | 🔴 | Phase 2 |
@@ -268,7 +287,7 @@ This section documents every tool evaluated — with reliability rating and deci
 > The system will always show a warning when a file type is not fully supported.
 
 > **Info: Anonymization Schema for Test Data**
-> 
+>
 > | Code | Theme | OEM | Kürzel |
 > |------|-------|-----|--------|
 > | OEM-G | US Presidents (GEORGE) | Mercedes-Benz | _PM |
@@ -277,6 +296,7 @@ This section documents every tool evaluated — with reliability rating and deci
 > | OEM-H | Greek Gods (HADES) | Volvo | _PV |
 > | OEM-S | Musicians (SWIFT) | China / Internal | _CH |
 > | _SIA | — | Internal (Antonios) | _SIA |
+
 #### E2. Language Support
 
 | Model | Size | DE Support | Decision |
@@ -294,7 +314,7 @@ This section documents every tool evaluated — with reliability rating and deci
 | Free text query (DE/EN) | DocSeek + PartSeek | 🟢 | Core feature — verified ✅ |
 | Follow-up questions | DocSeek | 🟢 | Last 5 queries remembered |
 | Multi-document comparison | DocSeek | 🟢 | Multi-Query Retrieval (LangChain) |
-| Image upload (photo of part) | PartSeek | 🔴 | Phase 2 — LLaVA |
+| Image upload (photo of part) | PartSeek | 🟡 | Phase 2 — YOLO / LLaVA |
 | Voice input | — | 🔴 | Not planned |
 
 ---
@@ -310,9 +330,10 @@ This section documents every tool evaluated — with reliability rating and deci
 | OCR (scanned docs + images) | pytesseract + Pillow | 🟡 | Tested on fastener datasheets ✅ |
 | Image → searchable PDF | fpdf2 | 🟢 | OCR text saved as PDF ✅ |
 | Language detection | get_language() | 🟢 | DE vs EN — heuristic keyword check ✅ |
+| Module assignment | get_module() | 🟢 | category → module tag ✅ |
 | DOCX parsing | LangChain DocLoader | 🟢 | Clean extraction |
 | XLSX parsing | LangChain + openpyxl | 🟢 | Tables and structured data |
-| Image description | LLaVA (Ollama)* | 🔴 | Phase 2 |
+| Image recognition | YOLO / LLaVA* | 🟡 | Phase 2 — incremental training |
 
 #### V2. Chunking Strategy
 
@@ -344,7 +365,7 @@ This section documents every tool evaluated — with reliability rating and deci
 |-------|------|--------|----------|
 | **llama3:8b (Ollama)** | 4.7GB | 🟢 | ✅ Selected — main model |
 | **rank-bm25** | — | 🟢 | ✅ Baseline — keyword search for MLFlow comparison |
-| LLaVA (Ollama)* | 4.5GB | 🔴 | Phase 2 — vision model |
+| LLaVA (Ollama)* | 4.5GB | 🟡 | Phase 2 — vision model, no training needed |
 
 #### V6. Experiment Tracking
 
@@ -369,24 +390,11 @@ This section documents every tool evaluated — with reliability rating and deci
 | Service | Port | R/Y/G | Notes |
 |---------|------|--------|-------|
 | Ollama (llama3 + nomic-embed-text) | 11434 | 🟢 | ✅ Running |
-| ChromaDB | 8000 | 🟢 | ✅ Installed + tested |
+| ChromaDB | local | 🟢 | ✅ Installed + tested |
 | FastAPI Backend | 8001 | 🟢 | ✅ Running — DocSeek + PartSeek |
-| React Frontend | 3000 | 🟢 | ✅ Running (dev: 8081) |
+| React Frontend | 8081 | 🟢 | ✅ Running |
 | MLFlow UI | 5000 | 🟢 | ✅ Running |
-| Docker Compose | — | 🔴 | Planned — end of Phase 1 |
-
-**Resource Management (Mac M1 16GB):**
-
-Without Docker:
-```bash
-brew services stop ollama   # stop when not needed
-```
-
-With Docker Compose *(planned)*:
-```bash
-docker compose up      # start everything
-docker compose stop    # stop everything
-```
+| Docker Compose | — | 🔴 | Planned — Phase 2 |
 
 #### V9. Frontend & DevOps
 
@@ -397,7 +405,7 @@ docker compose stop    # stop everything
 | Framer Motion | 🟢 | ✅ Selected | Spring physics animations |
 | shadcn/ui | 🟢 | ✅ Selected | Component library |
 | Lovable.ai | 🟢 | ✅ Used | AI UI generator — code now in repo |
-| FastAPI | 🟢 | ✅ Selected | REST API — next step |
+| FastAPI | 🟢 | ✅ Active | REST API — port 8001 ✅ |
 | Git + GitHub + gh CLI | 🟢 | ✅ Selected | Version control + automation |
 | Pytest | 🟢 | ✅ Selected | Backend testing |
 | three.js + jt-js* | 🔴 | Phase 2 | 3D viewer |
@@ -432,12 +440,16 @@ docker compose stop    # stop everything
 
 | Feature | R/Y/G | Notes |
 |---------|--------|-------|
-| Part image + dimensions (A/B/C) | 🟢 | From datasheet metadata |
-| Material + surface treatment | 🟢 | Parsed from PDF |
-| Strength class + force values | 🟢 | Technical values |
-| Part number + revision + drawing link | 🟢 | Required metadata |
-| OEM logo | 🟢 | Static library in frontend |
+| Part search by text | 🟢 | Semantic search via ChromaDB ✅ |
+| Thread size detection | 🟢 | Extracted from chunk text ✅ |
+| Strength class detection | 🟢 | Extracted from chunk text ✅ |
+| Drive type detection | 🟢 | Torx, Hex, Innensechskant ✅ |
+| Coating detection | 🟢 | verzinkt, KTL, Zn ✅ |
+| Self-locking detection | 🟢 | Mikroverkapselung, Prevailing Torque ✅ |
+| Norm detection | 🟢 | DIN, MBN, ISO from text ✅ |
+| OEM filter | 🟢 | Filter by oem_code ✅ |
 | Team collision warning | 🟡 | MVP: basic — full Phase 2 |
+| Part image search (YOLO) | 🟡 | Phase 2 — incremental |
 | Project usage | 🔴 | Phase 2 |
 | Recommended torque values | 🔴 | Phase 2 — linked to NormSeek |
 
@@ -485,10 +497,11 @@ A table with requirement, OEM, value, and status (🟢 same / ❌ different / �
 
 | Input | R/Y/G | Notes |
 |-------|--------|-------|
-| Text description | 🟢 | Semantic search via ChromaDB |
-| Search by properties | 🟢 | Material, strength, force values |
-| Image upload — LLaVA | 🟡 | Try for 27.03 — no training needed |
-| Image upload — YOLO | 🔴 | Phase 2 — needs ~500 labeled images |
+| Text description | 🟢 | Semantic search via ChromaDB ✅ |
+| Search by properties | 🟢 | Thread size, strength, coating, drive type ✅ |
+| OEM filter | 🟢 | Filter by OEM code ✅ |
+| Image upload — LLaVA | 🟡 | Phase 2 — no training needed |
+| Image upload — YOLO | 🟡 | Phase 2 — incremental training from 10 images |
 
 ### 10.2 Team Collision Feature
 
@@ -498,6 +511,19 @@ If Engineer A searches for M16x20 and Engineer B searches for M16x21:
 
 **Goal:** Reduce part variety, encourage standardization.
 
+### 10.3 YOLO — Incremental Image Training Plan
+
+| Phase | Images | Goal |
+|-------|--------|------|
+| Phase 2a | 10 images | Proof of concept — basic part recognition |
+| Phase 2b | 50 images | Better recognition — more part types |
+| Phase 2c | 500 images | Production ready — high accuracy |
+
+> Dataset source: Roboflow Universe — pre-labeled fastener datasets available.
+> ChromaDB architecture already supports this — image chunks get:
+> `module="partseek"` + `doc_type="Image"` + `category="Supplier-Fastener"`
+> No restructuring needed when YOLO is added.
+
 ---
 
 ## 11. System Architecture
@@ -505,17 +531,16 @@ If Engineer A searches for M16x20 and Engineer B searches for M16x21:
 ```
 User types question
         ↓
-React Frontend
+React Frontend (port 8081)
         ↓
 FastAPI Backend (port 8001)
         ↓
-LangChain → ChromaDB (finds relevant chunks)
+module filter → ChromaDB "knowseek" collection
         ↓
-Ollama llama3 → generates answer
+module="docseek"  → llama3 → text answer + source
+module="partseek" → structured list + collision check
         ↓
-Answer + confidence 🟢🟡🔴 + source link → Frontend
-        ↓
-User sees answer + traffic light + clickable source
+Answer + confidence 🟢🟡🔴 + source → Frontend
 ```
 
 ---
@@ -525,23 +550,40 @@ User sees answer + traffic light + clickable source
 Every document chunk stored in ChromaDB has metadata attached.
 This prevents hallucination — llama3 can only answer based on verified source chunks.
 
-### Base Schema — All Documents
+### Base Schema — All Documents (rev06_001)
 
 ```python
 metadata = {
-    "source_id":    "#74",
-    "filename":     "OEM-V_SPEC_001.pdf",
+    "source_id":    "#74ABC",
+    "filename":     "OEM-G_Corrosion_PM.pdf",
     "page":         14,
-    "date":         "20260316",
-    "category":     "Corrosion",        # Corrosion / Bolts+Torque / Painting / General
-    "doc_type":     "1-Pager",          # 1-Pager / Datasheet / Standard / Lastenheft
-    "language":     "EN",               # DE / EN — auto-detected by get_language()
-    "oem_code":     "OEM-V",            # OEM-G / OEM-M / OEM-Z / OEM-H / OEM-S / OEM-B
-    "verified":     True,
     "chunk_index":  3,
-    "chunk_config": "medium",           # small / medium / large
+    "oem_code":     "OEM-G",        # OEM-G / OEM-M / OEM-Z / OEM-H / OEM-S
+    "category":     "Corrosion",    # Corrosion / Painting / OEM-Fastener /
+                                    # Supplier-Fastener / Bracket / General
+    "module":       "docseek",      # docseek / partseek / normseek / costseek
+    "doc_type":     "Standard",     # 1-Pager / Datasheet / Standard / Lastenheft
+    "language":     "EN",           # DE / EN — auto-detected by get_language()
+    "verified":     True,
+    "chunk_config": "medium",       # small / medium / large
 }
 ```
+
+### Category → Module Mapping
+
+```python
+# PartSeek categories — module="partseek"
+PART_CATEGORIES = ["OEM-Fastener", "Supplier-Fastener", "Bracket"]
+
+# DocSeek categories — module="docseek"
+# Everything else: Corrosion, Painting, General
+```
+
+### Note on Categorization
+
+> Categorization is based on **filename** — not chunk content.
+> All chunks from one file get the same category and module.
+> This is a known limitation — see Section 15.
 
 ### Drawing Warning — Anti-Hallucination
 
@@ -554,9 +596,6 @@ metadata = {
 }
 ```
 
-> This warning is passed to llama3 in the prompt.
-> Prevents hallucination on dimensional queries.
-
 ---
 
 ## 13. Repository Structure
@@ -564,45 +603,42 @@ metadata = {
 ```
 KnowSeek/
 ├── 01_backend/
+│   ├── main.py             ✅ rev06_001 — FastAPI port 8001
 │   ├── modules/
-│   │   ├── 01_partseek/        ✅ rev05_003
-│   │   │   ├── ingest.py       ✅
-│   │   │   ├── search.py       ✅
-│   │   │   └── answer.py       ✅
-│   └── main.py                 ✅ FastAPI all 4 modules
+│   │   ├── 01_partseek/
+│   │   │   ├── ingest.py   ✅ rev06_001 — calls DocSeek ingest
+│   │   │   ├── search.py   ✅ rev06_001 — filter module="partseek"
+│   │   │   └── answer.py   ✅ rev06_001 — structured results + collision
 │   │   ├── 02_docseek/
-│   │   │   ├── ingest.py       ✅ rev05_002
-│   │   │   ├── search.py       ✅ 
-│   │   │   └── answer.py       ✅ 
-│   │   ├── 03_normseek/        ← Phase 2
-│   │   └── 04_costseek/        ← Phase 3
-│   ├──  main.py
-│   └── utils/                  ← shared tools
-│        └── check_pdfs.py
+│   │   │   ├── ingest.py   ✅ rev06_001 — load + OCR + module tag + store
+│   │   │   ├── search.py   ✅ rev06_001 — filter module="docseek"
+│   │   │   └── answer.py   ✅ rev06_001 — RAG + llama3 + OEM comparison
+│   │   ├── 03_normseek/    ⏳ Phase 2
+│   │   └── 04_costseek/    ⏳ Phase 3
+│   └── utils/
+│       └── check_pdfs.py   ✅ rev06_001 — auto OCR for all modules
 ├── 02_frontend/
-│   ├── 01_src/                 ← Active React code
-│   ├── 04_KnowSeek_Lovable_Prompt_rev05.md
-│   └── 05_frontend_manifest.md
+│   └── 01_src/             ✅ React running port 8081
 ├── 03_docs/
-│   ├── discovery/
+│   ├── discovery/          ← original planning docs (historical)
 │   ├── pictures/
 │   │   └── okr_diagram.svg
-│   └── RnD_DESCRIPTION.md     ← This file — rev05_002
+│   └── RnD_DESCRIPTION.md  ← This file — rev06_001
 ├── 04_progress/
 │   └── sprint_logs/
-│       └── SPRINT_PLAN.md      ← rev05_001
-├── 05_data/                    ← Local only — never pushed to GitHub
-│   ├── 01_Fasteners/           ← 8x PNG + 8x PDF (OCR converted) ✅
-│   ├── 02_Specifikation/       ← 5x PDF ✅
-│   └── 03_Painting/            ← 2x PDF ✅
+│       └── SPRINT_PLAN.md  ← rev06_001
+├── 05_data/                ← Local only — never pushed to GitHub
+│   ├── 01_Fasteners/       ← PDFs (OCR converted) ✅
+│   ├── 02_Specifikation/   ← OEM specification PDFs ✅
+│   └── 03_Painting/        ← Paint standard PDFs ✅
 ├── 06_notebooks/
-│   └── EDA.ipynb               ← rev05_work
-├── build_ppt.py                ← PPT builder rev05_002
-├── docker-compose.yml          ← Planned
+│   └── EDA.ipynb           ✅ rev06_001 — Chapter 1-6
+├── build_ppt.py
+├── docker-compose.yml      ← Planned Phase 2
 ├── .gitignore
 ├── LICENSE
-├── README.md                   ← rev05_002
-└── requirements.txt            ← rev05_002
+├── README.md               ✅ rev06_001
+└── requirements.txt        ✅ rev06_001
 ```
 
 ---
@@ -612,34 +648,26 @@ KnowSeek/
 | Week | Dates | Goal | Key Deliverable |
 |------|-------|------|-----------------|
 | Week 1 | 10–16.03 | Repo + Frontend + PM + Environment | ✅ Done |
-| Week 2 | 17–20.03 | Midterm ready | EDA + MLFlow comparison + Midterm PPT |
-| Week 3 | 21–26.03 | DocSeek + PartSeek + Technical PPT | Full RAG pipeline + frontend connected |
+| Week 2 | 17–20.03 | Midterm ready | ✅ EDA + MLFlow + Midterm PPT delivered |
+| Week 3 | 21–26.03 | DocSeek + PartSeek + FastAPI | ✅ RAG pipeline + FastAPI running |
 | Week 4 | 27.03 | Dry Run + Stakeholder PPT | Live demo + repo clean |
 | Final | 02.04 | Stakeholder Presentation | Final delivery |
 
-### Week 1 — Status (10–16.03)
+### Week 3 — Status (21–25.03)
 
 | Area | Status | Notes |
 |------|--------|-------|
-| GitHub repo + folder structure | ✅ | 01–06 folders clean |
-| Frontend (Lovable) | ✅ | React UI running on port 8081 |
-| Frontend fixes | ✅ | Glow, icons, pulse animations |
-| Kanban board | ✅ | GitHub Projects — 39 issues, 3 milestones |
-| RnD_DESCRIPTION.md | ✅ | EVA + OKRs + Metadata Schema — rev05_002 |
-| Ollama + llama3 | ✅ | v0.17.7 — 4.7GB |
-| nomic-embed-text | ✅ | 274MB — via Ollama |
-| Python venv + requirements.txt | ✅ | Python 3.11.3 — rev05_002 |
-| ChromaDB | ✅ | v1.5.5 installed + tested |
-| rank-bm25 | ✅ | v0.2.2 installed |
-| MLFlow | ✅ | Running on port 5000 — BM25 + RAG logged ✅ |
-| Anonymized test data | ✅ | 15 docs / 59 chunks / 4 categories |
-| ingest.py (DocSeek) | ✅ | OCR + language detection + 4 categories — rev05_002 |
-| search.py (DocSeek) | ✅ | Similarity search + filter + confidence — rev05_002 |
-| answer.py (DocSeek) | ✅ | RAG + OEM comparison + partial results — rev05_002 |
-| DE + EN verified | ✅ | 45 EN / 14 DE chunks — auto-detected |
-| OCR pipeline | ✅ | pytesseract + fpdf2 — Fastener PDFs converted |
-| FastAPI first endpoint | 🔜 | Week 2 |
-| EDA Notebook | 🔜 | Chapter 3 done — Chapter 6 next |
+| FastAPI main.py | ✅ | Running port 8001 — DocSeek + PartSeek |
+| ChromaDB restructuring | ✅ | "docseek" → "knowseek" + module field |
+| ingest.py rev06_001 | ✅ | New CATEGORY_MAP + get_module() |
+| search.py DocSeek rev06_001 | ✅ | where=module="docseek" |
+| search.py PartSeek rev06_001 | ✅ | where=module="partseek" |
+| answer.py DocSeek rev06_001 | ✅ | RAG + OEM comparison |
+| answer.py PartSeek rev06_001 | ✅ | Structured results + collision |
+| check_pdfs.py | ✅ | Auto OCR in utils/ |
+| EDA Notebook rev06_001 | ✅ | Chapter 1-6 + knowseek collection |
+| 39 docs / 121 chunks | ✅ | 4 categories — docseek + partseek |
+| Frontend connected to backend | 🔜 | main_sia07 |
 
 ---
 
@@ -647,11 +675,14 @@ KnowSeek/
 
 | Limitation | Impact | Workaround | When Fixed |
 |------------|--------|------------|------------|
-| Geometry from drawings not extractable | Image search limited | Text fields only — warning shown | Phase 2 LLaVA or YOLO  |
-| Scanned PDFs — OCR quality varies | Some docs partially indexed | Warning shown to user | MVP accepted |
-| OCR on technical drawings — partial | Symbols (±, ⌀, °) often missed | Use digital PDFs where possible | MVP accepted |
-| Tables in scanned images — partial | Some table data missed | Use digital PDFs | MVP accepted |
-| High ChromaDB score ≠ good answer | Misleading confidence signal | Explain in UI — separate answer quality score | Phase 2 |
+| Categorization based on filename only | Wrong module for some docs | Careful file naming | Phase 2 — chunk-level categorization |
+| All chunks from one file = same module | Cross-module docs not split | Accepted for MVP | Phase 2 |
+| "iso" keyword too broad | CRASH-ISO docs → partseek | Remove "iso" from CATEGORY_MAP | rev06_002 |
+| Geometry from drawings not extractable | Image search limited | Text fields only | Phase 2 LLaVA / YOLO |
+| Scanned PDFs — OCR quality varies | Some docs partially indexed | Warning shown | MVP accepted |
+| OCR on technical drawings — partial | Symbols (±, ⌀, °) often missed | Use digital PDFs | MVP accepted |
+| Embedding space changes with dataset size (Hypothesis) | EDA observation: 59 chunks → correct RED for nonsense. 121 chunks → score 0.797 for same query. Root cause: Semantic search finds relative best match, not absolute fit. **Question:** "Which chunk is best?" (relative) vs "Does this fit our knowledge?" (absolute). **Verification in progress** | **Hybrid Search (BM25 + Semantic):** Use BM25 as absolute filter — if BM25 score = 0 (no keywords match), return RED immediately. Only run semantic search if BM25 > 0. Answers the right question: "Does this query fit?" ✅ MVP-ready | Phase 2 exploration |
+| High ChromaDB score ≠ good answer | Misleading confidence signal | Explain in UI | Phase 2 |
 | Large Lastenhefte (300p) — slow | Ingestion takes time | Background processing | MVP accepted |
 | Mac M1 16GB — resource limit | Can't run all services at once | Stop unused services | Docker Compose |
 | No user authentication | All docs visible to all | Accepted for MVP demo | Phase 2 |
@@ -666,12 +697,14 @@ KnowSeek/
 | Feature | Notes |
 |---------|-------|
 | NormSeek.ai | ISO / OEM norm comparison |
-| LLaVA or  YOLO  image search | Photo of part → find in catalog |
+| YOLO image search | Start with 10 images — incremental training |
+| LLaVA image search | No training needed — describe parts in text |
 | JT 3D Viewer | three.js + jt-js |
 | Multi-user + auth | Team features |
 | Auto folder watcher | watchdog library |
 | Email parsing | extract-msg / python-pst |
 | CAD metadata from NX | NX Open API |
+| Chunk-level categorization | LLM analyzes chunk text for better module assignment |
 
 ### Phase 3 (Production)
 
@@ -708,30 +741,62 @@ KnowSeek/
 - Data path shown — not file content
 
 ### PDF Readability Check — Auto OCR
-
 Before ingest, all PDFs are checked for readable text.
+- Step 1: Check each PDF — how many chars?
+- Step 2: If 0 chars → OCR automatically applied
+- Step 3: Check again after OCR
+- Step 4: If still 0 chars → needs YOLO (Phase 2)
 
-- **Step 1:** Check each PDF — how many chars?
-- **Step 2:** If 0 chars → OCR automatically applied
-- **Step 3:** Check again after OCR
-- **Step 4:** If still 0 chars → file needs YOLO (Phase 2)
-
-Files that cannot be read by OCR:
-
-- Complex technical drawings
-- Low resolution scans
-- Files with only geometry (no text)
-- These are flagged with ⚠️ in the notebook output
-
-This check runs automatically in EDA Chapter 2.2.0
-before ingest.py is called.
+This check runs automatically in EDA Chapter 2.2.0 via `check_pdfs.py`.
 
 ### Supported File Types
 ✅ .pdf .png .webp .jpg .docx .xlsx
 ⚠️ everything else → warning at runtime
 
+---
+
+## 19. ChromaDB Architecture — One Collection, Module Filtering
+
+All KnowSeek modules share ONE ChromaDB collection called **"knowseek"**.
+Data is not separated by collection — it is separated by the `module` metadata field.
+
+```
+Collection "knowseek":
+┌────────────────────────────────────────────────────┐
+│ chunk → module="docseek"  + category="Corrosion"   │
+│ chunk → module="docseek"  + category="Painting"    │
+│ chunk → module="docseek"  + category="General"     │
+│ chunk → module="partseek" + category="OEM-Fastener"│
+│ chunk → module="partseek" + category="Supplier-..."│
+│ chunk → module="normseek" + category="ISO-Standard"│ ← Phase 2
+│ chunk → module="costseek" + category="Pricing"     │ ← Phase 3
+└────────────────────────────────────────────────────┘
+```
+
+**Why one collection:**
+- No data duplication — shared documents accessible by all modules
+- Easy to scale — add NormSeek/CostSeek by adding module tag
+- Simple ingest — one pipeline for all modules
+
+**Why module filtering:**
+- Each module shows only relevant results
+- DocSeek gets documents — PartSeek gets parts
+- Different response formats per module
+- User chooses module in frontend — gets focused results
+
+**Search examples:**
+```python
+# DocSeek — only document chunks
+where={"module": "docseek"}
+
+# PartSeek — only part chunks
+where={"module": "partseek"}
+
+# Cross-module — all chunks (no filter)
+# e.g. for future global search feature
+```
 
 ---
 
 *This document is the single source of truth for all KnowSeek.ai development.*
-*Version: rev05_002 — Last updated: 17.03.2026 — Branch: main_sia05*
+*Version: rev06_001 — Last updated: 25.03.2026 — Branch: main_sia07*
