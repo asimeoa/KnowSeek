@@ -116,7 +116,7 @@ npm run dev
 
 Open your browser at `http://localhost:8081` — press `Ctrl + C` to stop.
 
-* Start MLFlow:
+* Start MLFlow (in Terminal):
 
 ```bash
 echo http://127.0.0.1:5000/ > .mlflow_uri

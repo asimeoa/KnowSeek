@@ -1,12 +1,12 @@
 """
 search.py — KnowSeek.Ai — PartSeek Module
 ─────────────────────────────────────────
-Searches ChromaDB for fastener parts.
-Uses same ChromaDB as DocSeek but with
-category filter "Bolts+Torque".
+Searches ChromaDB for fastener and part documents.
+Uses same ChromaDB as all KnowSeek modules,
+filtered by module="partseek".
 
-Version: rev05_003
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 08:20
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -20,7 +20,6 @@ Chapters:
         4.3 search_part_with_filter()
     5. Run
 """
-
 
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
@@ -37,10 +36,9 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-# Auto-detect DB path — works from anywhere
 DB_PATH         = str(Path(__file__).resolve().parents[3] / "chroma_db")
-COLLECTION_NAME = "docseek"   # Same DB as DocSeek
-PART_CATEGORY   = "Bolts+Torque"
+COLLECTION_NAME = "knowseek"   # ONE collection for all modules
+MODULE          = "partseek"   # this module's filter value
 N_RESULTS       = 5
 
 # Confidence thresholds
@@ -54,12 +52,12 @@ THREAD_SIZES = ["M4", "M5", "M6", "M8", "M10", "M12", "M14", "M16", "M20"]
 LENGTH_MIN = 10
 LENGTH_MAX = 45
 
-# OEM suffix mapping
+# OEM suffix mapping — from filename suffix to real OEM name
 OEM_SUFFIX_MAP = {
-    "_PM": "Mercedes-Benz",
-    "_PG": "GM",
-    "_PV": "Volvo",
-    "_CH": "China / Internal",
+    "_PM":  "Mercedes-Benz",
+    "_PG":  "GM",
+    "_PV":  "Volvo",
+    "_CH":  "China / Internal",
     "_SIA": "Internal",
 }
 
@@ -117,7 +115,9 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
     # Try to detect self-locking from text
     self_locking = any(kw in text.lower() for kw in [
         "mikroverkapselung", "prevailing torque", "self-lock",
-        "self locking", "klebe", "loctite"
+        "self locking", "klebe", "loctite",
+        "kraftschlüssig", "formschlüssig", "stoffschlüssig",
+        "federscheibe", "sicherungslack"
     ])
 
     # Try to detect norm from text
@@ -128,7 +128,7 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
             norm = text[idx:idx+20].strip()
             break
 
-    # Get OEM real name from suffix
+    # Get OEM real name from filename suffix
     filename = metadata.get("filename", "")
     oem_real = None
     for suffix, real in OEM_SUFFIX_MAP.items():
@@ -137,20 +137,21 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
             break
 
     return {
-        "rank":          rank,
-        "score":         similarity,
-        "signal":        get_confidence_signal(similarity),
-        "text":          text[:300] + "..." if len(text) > 300 else text,
-        "oem_code":      metadata.get("oem_code", ""),
-        "oem_real":      oem_real,
-        "category":      metadata.get("category", ""),
-        "page":          metadata.get("page", 0),
-        "norm":          norm,
-        "thread_size":   thread_size,
+        "rank":           rank,
+        "score":          similarity,
+        "signal":         get_confidence_signal(similarity),
+        "text":           text[:300] + "..." if len(text) > 300 else text,
+        "oem_code":       metadata.get("oem_code", ""),
+        "oem_real":       oem_real,
+        "category":       metadata.get("category", ""),
+        "module":         metadata.get("module", ""),
+        "page":           metadata.get("page", 0),
+        "norm":           norm,
+        "thread_size":    thread_size,
         "strength_class": strength_class,
-        "drive_type":    drive_type,
-        "coating":       coating,
-        "self_locking":  self_locking,
+        "drive_type":     drive_type,
+        "coating":        coating,
+        "self_locking":   self_locking,
     }
 
 
@@ -184,7 +185,7 @@ def search_part(
 ) -> list[dict]:
     """
     Search for parts in ChromaDB.
-    Always filters by category="Bolts+Torque".
+    Always filters by module="partseek".
 
     Usage:
         results = search_part("M8 Torx screw")
@@ -196,7 +197,7 @@ def search_part(
     raw = collection.query(
         query_texts=[query],
         n_results=n_results,
-        where={"category": PART_CATEGORY},
+        where={"module": MODULE},
         include=["documents", "metadatas", "distances"]
     )
     elapsed = round((time.time() - start) * 1000, 1)
@@ -217,12 +218,12 @@ def search_part(
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
             print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — OEM: {r['oem_code']} ({r['oem_real'] or '?'})")
-            if r["thread_size"]:   print(f"       Thread:   {r['thread_size']}")
+            if r["thread_size"]:    print(f"       Thread:   {r['thread_size']}")
             if r["strength_class"]: print(f"       Strength: {r['strength_class']}")
-            if r["drive_type"]:    print(f"       Drive:    {r['drive_type']}")
-            if r["coating"]:       print(f"       Coating:  {r['coating']}")
-            if r["norm"]:          print(f"       Norm:     {r['norm']}")
-            if r["self_locking"]:  print(f"       Self-locking: Yes")
+            if r["drive_type"]:     print(f"       Drive:    {r['drive_type']}")
+            if r["coating"]:        print(f"       Coating:  {r['coating']}")
+            if r["norm"]:           print(f"       Norm:     {r['norm']}")
+            if r["self_locking"]:   print(f"       Self-locking: Yes")
             print()
 
     return results
@@ -238,6 +239,7 @@ def search_part_with_filter(
 ) -> list[dict]:
     """
     Search parts with additional filters.
+    Always includes module="partseek" filter.
 
     Usage:
         results = search_part_with_filter("screw", oem_code="OEM-V")
@@ -245,10 +247,10 @@ def search_part_with_filter(
     """
     collection = get_collection()
 
-    # Build where filter
-    where = {"category": PART_CATEGORY}
+    # Always filter by module — add optional filters on top
+    where = {"module": MODULE}
     if oem_code:
-        where = {"$and": [{"category": PART_CATEGORY}, {"oem_code": oem_code}]}
+        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}]}
 
     start = time.time()
     raw = collection.query(
@@ -278,6 +280,7 @@ def search_part_with_filter(
         print(f"Filter:   oem={oem_code or 'all'} thread={thread_size or 'all'}")
         print(f"Results:  {len(results)}")
         print(f"Time:     {elapsed}ms")
+        print()
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
             print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — {r['oem_code']} | {r['thread_size']} | {r['strength_class']} | {r['drive_type']}")

@@ -163,16 +163,16 @@
 
 ## Week 3 — Korrekture  + ChromaDB Restructuring (24.03) Issue with chromeDB Architecture
 
-### Completed in main_sia06 ✅
+### Completed in main_sia07 ✅
 
-- [ ] Backup ChromaDB — `cp -r chroma_db chroma_db_backup_sia05`
-- [ ] migrate_chromadb.py — "docseek" → "knowseek" + module field
-- [ ] 02_docseek/ingest.py — COLLECTION_NAME + metadata["module"]="docseek"
-- [ ] 02_docseek/search.py — COLLECTION_NAME + where module filter
-- [ ] 02_docseek/answer.py — COLLECTION_NAME update
-- [ ] 01_partseek/search.py — COLLECTION_NAME + where module filter
-- [ ] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
-- [ ] 01_partseek/answer.py — COLLECTION_NAME update
+- [x] Backup ChromaDB — `cp -r chroma_db chroma_db_backup_sia05`
+- [x] migrate_chromadb.py — "docseek" → "knowseek" + module field
+- [x] 02_docseek/ingest.py — COLLECTION_NAME + metadata["module"]="docseek"
+- [x] 02_docseek/search.py — COLLECTION_NAME + where module filter
+- [x] 02_docseek/answer.py — COLLECTION_NAME update
+- [x] 01_partseek/search.py — COLLECTION_NAME + where module filter
+- [x] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
+- [x] 01_partseek/answer.py — COLLECTION_NAME update
 - [ ] main.py health check — knowseek + chunks per module
 - [ ] EDA Notebook — alle "docseek" → "knowseek" (Ch 1,2,3,4,6)
 - [ ] Verification — curl health + docseek query + partseek query

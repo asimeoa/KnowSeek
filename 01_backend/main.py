@@ -3,11 +3,11 @@ main.py — KnowSeek.Ai — FastAPI Backend
 ─────────────────────────────────────────
 REST API connecting Frontend to all KnowSeek modules.
 
-Version: rev05_003 21.03.2026 17:01
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 13:24
+Branch:  main_sia07
 
 Modules:
-    01 PartSeek.Ai  — Part search         🔜 Week 3
+    01 PartSeek.Ai  — Part search         ✅ Active
     02 DocSeek.Ai   — Document search     ✅ Active
     03 NormSeek.Ai  — Norm search         ⏳ Phase 2
     04 CostSeek.Ai  — Cost analysis       ⏳ Phase 3
@@ -16,9 +16,9 @@ Endpoints:
     GET  /api/health              → Check all services
     POST /api/docseek/query       → Ask a question (RAG)
     POST /api/docseek/compare     → Compare across OEMs
-    POST /api/partseek/query      → Search for parts     🔜
-    POST /api/normseek/query      → Search norms         ⏳
-    POST /api/costseek/query      → Cost analysis        ⏳
+    POST /api/partseek/query      → Search for parts
+    POST /api/normseek/query      → Search norms     ⏳
+    POST /api/costseek/query      → Cost analysis    ⏳
 """
 
 # ─────────────────────────────────────────────────────
@@ -27,6 +27,7 @@ Endpoints:
 
 import sys
 import requests
+import importlib.util
 from pathlib import Path
 from typing import Optional
 
@@ -35,20 +36,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import chromadb
 
+
 # ─────────────────────────────────────────────────────
 # 2. PATHS — auto-detect, works from anywhere
 # ─────────────────────────────────────────────────────
 
-# Root of the repo — always works regardless of where you run from
-ROOT     = Path(__file__).resolve().parent.parent
-DB_PATH = str(Path(__file__).resolve().parents[1] / "chroma_db")
-MODULES  = ROOT / "01_backend" / "modules"
+ROOT    = Path(__file__).resolve().parent.parent
+DB_PATH = str(ROOT / "chroma_db")
+MODULES = ROOT / "01_backend" / "modules"
 
-# Add all module paths
-sys.path.insert(0, str(MODULES / "02_docseek"))   # DocSeek  ✅
-sys.path.insert(0, str(MODULES / "01_partseek"))  # PartSeek 🔜
-sys.path.insert(0, str(MODULES / "03_normseek"))  # NormSeek ⏳
-sys.path.insert(0, str(MODULES / "04_costseek"))  # CostSeek ⏳
+# importlib with full path
+def load_module(name, path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    mod  = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+#sys.path.insert(0, str(MODULES / "03_normseek"))  # NormSeek ⏳
+#sys.path.insert(0, str(MODULES / "04_costseek"))  # CostSeek ⏳
 
 # ─────────────────────────────────────────────────────
 # 3. IMPORT MODULES — graceful fallback if not ready
@@ -56,24 +62,30 @@ sys.path.insert(0, str(MODULES / "04_costseek"))  # CostSeek ⏳
 
 # DocSeek — Active ✅
 try:
-    from answer import ask, ask_with_filter, compare_oems
-    from ingest import run_ingest
-    from search import get_collection
+    docseek_answer = load_module("docseek_answer", 
+        MODULES / "02_docseek" / "answer.py")
+    ask           = docseek_answer.ask
+    ask_with_filter = docseek_answer.ask_with_filter
+    compare_oems  = docseek_answer.compare_oems
     DOCSEEK_READY = True
     print("✅ DocSeek module loaded")
-except ImportError as e:
+except Exception as e:
     DOCSEEK_READY = False
     print(f"⚠️  DocSeek not available: {e}")
 
-# PartSeek — Active 🔜
+
+# PartSeek — Active ✅
 try:
-    sys.path.insert(0, str(MODULES / "01_partseek"))
-    from answer import find_part, find_part_with_filter
+    partseek_answer = load_module("partseek_answer",
+        MODULES / "01_partseek" / "answer.py")
+    find_part           = partseek_answer.find_part
+    find_part_with_filter = partseek_answer.find_part_with_filter
     PARTSEEK_READY = True
     print("✅ PartSeek module loaded")
-except ImportError as e:
+except Exception as e:
     PARTSEEK_READY = False
     print(f"⚠️  PartSeek not available: {e}")
+
 
 # NormSeek — Phase 2 ⏳
 NORMSEEK_READY = False
@@ -90,10 +102,9 @@ print("⏳ CostSeek not yet active — Phase 3")
 app = FastAPI(
     title="KnowSeek.Ai API",
     description="Local AI Knowledge Platform — On-Premise RAG System",
-    version="rev05_003"
+    version="rev06_001"
 )
 
-# Allow Frontend to call Backend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -131,8 +142,8 @@ def check_ollama() -> dict:
         if r.status_code == 200:
             models = r.json().get("models", [])
             return {
-                "status": "ok",
-                "llama3": any(m["name"].startswith("llama3") for m in models),
+                "status":           "ok",
+                "llama3":           any(m["name"].startswith("llama3") for m in models),
                 "nomic-embed-text": any("nomic-embed-text" in m["name"] for m in models)
             }
         return {"status": "error", "message": f"HTTP {r.status_code}"}
@@ -141,18 +152,26 @@ def check_ollama() -> dict:
 
 
 def check_chromadb() -> dict:
-    """Check ChromaDB and return collection info."""
+    """Check ChromaDB knowseek collection and return module chunk counts."""
     try:
-        client = chromadb.PersistentClient(path=DB_PATH)
-        collections = client.list_collections()
-        if not collections:
-            return {"status": "warning", "message": "No collections — run ingest first"}
+        client     = chromadb.PersistentClient(path=DB_PATH)
+        collection = client.get_collection("knowseek")
+        total      = collection.count()
+
+        # Count chunks per module
+        docseek_data  = collection.get(where={"module": "docseek"},  include=[])
+        partseek_data = collection.get(where={"module": "partseek"}, include=[])
+
         return {
-            "status": "ok",
-            "collections": [c.name for c in collections]
+            "status":     "ok",
+            "collection": "knowseek",
+            "total":      total,
+            "docseek":    len(docseek_data["ids"]),
+            "partseek":   len(partseek_data["ids"]),
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 # ─────────────────────────────────────────────────────
 # 7. ENDPOINTS
@@ -163,10 +182,10 @@ def check_chromadb() -> dict:
 def root():
     return {
         "name":    "KnowSeek.Ai API",
-        "version": "rev05_003",
+        "version": "rev06_001",
         "modules": {
             "docseek":  "✅ active",
-            "partseek": "🔜 Week 3",
+            "partseek": "✅ active",
             "normseek": "⏳ Phase 2",
             "costseek": "⏳ Phase 3",
         }
@@ -177,9 +196,9 @@ def root():
 @app.get("/api/health")
 def health_check():
     """Check if all services are running."""
-    ollama   = check_ollama()
-    chroma   = check_chromadb()
-    overall  = "ok" if ollama["status"] == "ok" and chroma["status"] == "ok" else "degraded"
+    ollama  = check_ollama()
+    chroma  = check_chromadb()
+    overall = "ok" if ollama["status"] == "ok" and chroma["status"] == "ok" else "degraded"
 
     return {
         "status":   overall,
@@ -241,10 +260,7 @@ def docseek_compare(request: CompareRequest):
 def partseek_query(request: QueryRequest):
     """Search for parts by text query."""
     if not PARTSEEK_READY:
-        raise HTTPException(
-            status_code=503,
-            detail="PartSeek not available"
-        )
+        raise HTTPException(status_code=503, detail="PartSeek not available")
     try:
         if request.oem_code:
             result = find_part_with_filter(
@@ -266,22 +282,20 @@ def partseek_query(request: QueryRequest):
 @app.post("/api/normseek/query")
 def normseek_query(request: QueryRequest):
     """Search norms and standards. Coming in Phase 2."""
-    if not NORMSEEK_READY:
-        raise HTTPException(
-            status_code=503,
-            detail="NormSeek not yet active — planned Phase 2"
-        )
+    raise HTTPException(
+        status_code=503,
+        detail="NormSeek not yet active — planned Phase 2"
+    )
 
 
 # 7.7 CostSeek Query ⏳
 @app.post("/api/costseek/query")
 def costseek_query(request: QueryRequest):
     """Cost analysis. Coming in Phase 3."""
-    if not COSTSEEK_READY:
-        raise HTTPException(
-            status_code=503,
-            detail="CostSeek not yet active — planned Phase 3"
-        )
+    raise HTTPException(
+        status_code=503,
+        detail="CostSeek not yet active — planned Phase 3"
+    )
 
 
 # ─────────────────────────────────────────────────────

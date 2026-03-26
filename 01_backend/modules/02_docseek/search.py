@@ -1,11 +1,11 @@
 """
-search.py — KnowSeek.Ai — DocSeek Module 
+search.py — KnowSeek.Ai — DocSeek Module
 ─────────────────────────────────────────
 Searches ChromaDB for relevant chunks.
-Returns results with confidence score 🟢🟡🔴s
+Returns results with confidence score 🟢🟡🔴
 
-Version: rev05_003 21.03.2026 13.47
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 00:16
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -37,9 +37,10 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-DB_PATH = str(Path(__file__).resolve().parents[3] / "chroma_db")
-COLLECTION_NAME = "docseek"
-N_RESULTS       = 5       # how many chunks to return per query
+DB_PATH         = str(Path(__file__).resolve().parents[3] / "chroma_db")
+COLLECTION_NAME = "knowseek"   # ONE collection for all modules
+MODULE          = "docseek"    # this module's filter value
+N_RESULTS       = 5
 
 # Confidence thresholds
 THRESHOLD_GREEN  = 0.85   # > 85% → 🟢 Reliable
@@ -54,11 +55,8 @@ THRESHOLD_YELLOW = 0.60   # 60-85% → 🟡 Check source
 def get_confidence_signal(score: float) -> str:
     """
     Convert a similarity score to a traffic light signal.
-
     ChromaDB cosine distance: 0 = identical, 2 = opposite
     We convert to similarity: 1 - (distance / 2)
-
-    Returns: "🟢 Green", "🟡 Yellow", or "🔴 Red"
     """
     if score >= THRESHOLD_GREEN:
         return "GREEN"
@@ -86,6 +84,7 @@ def format_result(text: str, metadata: dict, distance: float, rank: int) -> dict
         "source_id":  metadata.get("source_id", ""),
         "oem_code":   metadata.get("oem_code", ""),
         "category":   metadata.get("category", ""),
+        "module":     metadata.get("module", ""),
         "doc_type":   metadata.get("doc_type", ""),
         "language":   metadata.get("language", ""),
     }
@@ -111,7 +110,6 @@ def get_collection(
         url="http://localhost:11434/api/embeddings",
         model_name="nomic-embed-text"
     )
-
     client = chromadb.PersistentClient(path=db_path)
     collection = client.get_collection(
         name=collection_name,
@@ -127,12 +125,12 @@ def search(
     verbose: bool = True
 ) -> list[dict]:
     """
-    Search ChromaDB for chunks relevant to the query.
-    Returns list of results with score + metadata.
+    Search ChromaDB for DocSeek chunks only.
+    Always filters by module="docseek".
 
     Usage:
         results = search("salt spray test OEM-V")
-        results = search("Schrauben M16 Korrosion", n_results=3)
+        results = search("Korrosionsanforderungen", n_results=3)
     """
     start = time.time()
     collection = get_collection()
@@ -140,6 +138,7 @@ def search(
     raw = collection.query(
         query_texts=[query],
         n_results=n_results,
+        where={"module": MODULE},
         include=["documents", "metadatas", "distances"]
     )
 
@@ -176,7 +175,8 @@ def search_with_filter(
     verbose: bool = True
 ) -> list[dict]:
     """
-    Search with metadata filter — e.g. only OEM-V docs.
+    Search DocSeek with additional metadata filters.
+    Always includes module="docseek" filter.
 
     Usage:
         results = search_with_filter("salt spray", oem_code="OEM-V")
@@ -184,19 +184,20 @@ def search_with_filter(
     """
     collection = get_collection()
 
-    where = {}
+    # Always filter by module — add optional filters on top
+    where = {"module": MODULE}
     if oem_code and category:
-        where = {"$and": [{"oem_code": oem_code}, {"category": category}]}
+        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}, {"category": category}]}
     elif oem_code:
-        where = {"oem_code": oem_code}
+        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}]}
     elif category:
-        where = {"category": category}
+        where = {"$and": [{"module": MODULE}, {"category": category}]}
 
     start = time.time()
     raw = collection.query(
         query_texts=[query],
         n_results=n_results,
-        where=where if where else None,
+        where=where,
         include=["documents", "metadatas", "distances"]
     )
     elapsed = round((time.time() - start) * 1000, 1)
@@ -236,7 +237,6 @@ def search_multi(
     Usage:
         results = search_multi([
             "salt spray test OEM-V",
-            "salt spray test OEM-W",
             "salt spray test OEM-G"
         ])
     """

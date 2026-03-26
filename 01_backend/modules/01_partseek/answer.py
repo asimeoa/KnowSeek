@@ -1,11 +1,13 @@
+
+
 """
 answer.py — KnowSeek.Ai — PartSeek Module
 ─────────────────────────────────────────
 Returns structured part results.
 No LLM needed — direct metadata display.
 
-Version: rev05_003
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 08:23
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -19,24 +21,29 @@ Chapters:
     5. Run
 """
 
-
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
 # ─────────────────────────────────────────────────────
 
 import sys
 import time
+import importlib.util
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent))
-from search import search_part, search_part_with_filter
+import importlib.util
+partseek_search_path = Path(__file__).resolve().parent / "search.py"
+spec = importlib.util.spec_from_file_location("partseek_search", partseek_search_path)
+search_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(search_module)
+search_part = search_module.search_part
+search_part_with_filter = search_module.search_part_with_filter
 
 
 # ─────────────────────────────────────────────────────
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-COLLISION_THRESHOLD = 0.85   # Score above this = possible duplicate
+COLLISION_THRESHOLD = 0.85   # Score above this = possible duplicate part
 
 
 # ─────────────────────────────────────────────────────
@@ -61,13 +68,13 @@ def format_answer(query: str, results: list[dict], elapsed_ms: float) -> dict:
     top = results[0]
 
     return {
-        "query":      query,
-        "found":      True,
-        "confidence": top["score"],
-        "signal":     top["signal"],
+        "query":       query,
+        "found":       True,
+        "confidence":  top["score"],
+        "signal":      top["signal"],
         "signal_icon": {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(top["signal"], "⚪"),
-        "results":    results,
-        "time_ms":    elapsed_ms,
+        "results":     results,
+        "time_ms":     elapsed_ms,
     }
 
 
@@ -79,6 +86,7 @@ def check_collision(results: list[dict]) -> dict:
 
     This is the Team Collision Warning feature:
     "A colleague recently searched for a similar part."
+    Goal: Reduce part variety, encourage standardization.
     """
     if not results:
         return {"collision": False}
@@ -111,11 +119,11 @@ def find_part(
         result = find_part("M8 Torx screw 10.9")
         result = find_part("Flanschschraube verzinkt")
     """
-    start = time.time()
+    start   = time.time()
     results = search_part(query, verbose=False)
     elapsed = round((time.time() - start) * 1000, 1)
 
-    answer = format_answer(query, results, elapsed)
+    answer    = format_answer(query, results, elapsed)
     collision = check_collision(results)
 
     if verbose:
@@ -155,7 +163,7 @@ def find_part_with_filter(
         result = find_part_with_filter("screw", oem_code="OEM-V")
         result = find_part_with_filter("coating", thread_size="M8")
     """
-    start = time.time()
+    start   = time.time()
     results = search_part_with_filter(
         query,
         oem_code=oem_code,
@@ -164,7 +172,7 @@ def find_part_with_filter(
     )
     elapsed = round((time.time() - start) * 1000, 1)
 
-    answer = format_answer(query, results, elapsed)
+    answer    = format_answer(query, results, elapsed)
     collision = check_collision(results)
 
     if verbose:

@@ -1,12 +1,12 @@
 """
-answer.py — KnowSeek.Ai — DocSeek Module rev 05 main_sia05
+answer.py — KnowSeek.Ai — DocSeek Module
 ─────────────────────────────────────────
 Takes search results from search.py,
 sends them to llama3 via Ollama,
 returns a clean answer with source + confidence.
 
-Version: rev05_003 21.03.2026 13.47
-Branch:  main_sia05
+Version: rev06_001 — 25.03.2026 08:00
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -22,30 +22,32 @@ Chapters:
     5. Run
 """
 
-
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
 # ─────────────────────────────────────────────────────
 
 import time
 import requests
-import json
+import importlib.util
 from pathlib import Path
 
-import sys
-sys.path.append(str(Path(__file__).resolve().parent))
-
-from search import search, search_with_filter, search_multi
+# Import search functions using explicit filepath
+docseek_search_path = Path(__file__).resolve().parent / "search.py"
+spec = importlib.util.spec_from_file_location("docseek_search", docseek_search_path)
+search_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(search_module)
+search = search_module.search
+search_with_filter = search_module.search_with_filter
 
 
 # ─────────────────────────────────────────────────────
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-OLLAMA_URL   = "http://localhost:11434/api/generate"
-LLM_MODEL    = "llama3"
-MAX_CONTEXT  = 3      # how many chunks to send to llama3
-TEMPERATURE  = 0.1    # low = more focused answers
+OLLAMA_URL  = "http://localhost:11434/api/generate"
+LLM_MODEL   = "llama3"
+MAX_CONTEXT = 3      # how many chunks to send to llama3
+TEMPERATURE = 0.1    # low = more focused answers
 
 
 # ─────────────────────────────────────────────────────
@@ -142,7 +144,7 @@ def ask(
 ) -> dict:
     """
     Full RAG pipeline — search + answer.
-    1. Search ChromaDB for relevant chunks
+    1. Search ChromaDB for relevant DocSeek chunks
     2. Build context from top results
     3. Send to llama3
     4. Return answer + source + confidence
@@ -153,36 +155,34 @@ def ask(
     """
     start = time.time()
 
-    # Step 1 — Search
     if verbose:
         print(f"Searching for: {question}")
+
     results = search(question, n_results=n_results, verbose=False)
 
     if not results:
         return {
-            "question": question,
-            "answer": "No documents found in the database.",
-            "confidence": 0.0,
-            "signal": "RED",
+            "question":    question,
+            "answer":      "No documents found in the database.",
+            "confidence":  0.0,
+            "signal":      "RED",
             "signal_icon": "🔴",
-            "sources": [],
-            "time_ms": 0
+            "sources":     [],
+            "time_ms":     0
         }
 
-    # Step 2 — Build context
     context = build_context(results)
     if not context:
         return {
-            "question": question,
-            "answer": "No relevant content found above confidence threshold.",
-            "confidence": results[0]["score"],
-            "signal": "RED",
+            "question":    question,
+            "answer":      "No relevant content found above confidence threshold.",
+            "confidence":  results[0]["score"],
+            "signal":      "RED",
             "signal_icon": "🔴",
-            "sources": [],
-            "time_ms": 0
+            "sources":     [],
+            "time_ms":     0
         }
 
-    # Step 3 — Send to llama3
     prompt = build_prompt(question, context)
 
     if verbose:
@@ -204,8 +204,6 @@ def ask(
         answer_text = f"Error connecting to Ollama: {e}"
 
     elapsed_ms = round((time.time() - start) * 1000, 1)
-
-    # Step 4 — Format result
     result = format_answer(question, answer_text, results, elapsed_ms)
 
     if verbose:
@@ -250,15 +248,28 @@ def ask_with_filter(
     )
 
     if not results:
-        return {"question": question, "answer": "No results found.", "signal": "RED"}
+        return {
+            "question":    question,
+            "answer":      "No results found.",
+            "confidence":  0.0,
+            "signal":      "RED",
+            "signal_icon": "🔴",
+            "sources":     [],
+            "time_ms":     0
+        }
 
-    context = build_context(results)
-    prompt  = build_prompt(question, context)
+    context    = build_context(results)
+    prompt     = build_prompt(question, context)
 
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={"model": LLM_MODEL, "prompt": prompt, "stream": False, "temperature": TEMPERATURE},
+            json={
+                "model":       LLM_MODEL,
+                "prompt":      prompt,
+                "stream":      False,
+                "temperature": TEMPERATURE
+            },
             timeout=120
         )
         answer_text = response.json().get("response", "No response.")
@@ -270,7 +281,8 @@ def ask_with_filter(
 
     if verbose:
         print(f"{result['signal_icon']} {result['answer']}")
-        print(f"Source: {result['sources'][0]['filename']} p.{result['sources'][0]['page']}")
+        if result["sources"]:
+            print(f"Source: {result['sources'][0]['filename']} p.{result['sources'][0]['page']}")
         print(f"Time: {result['time_ms']}ms")
 
     return result
