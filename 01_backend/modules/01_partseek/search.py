@@ -5,8 +5,8 @@ Searches ChromaDB for fastener and part documents.
 Uses same ChromaDB as all KnowSeek modules,
 filtered by module="partseek".
 
-Version: rev06_001 — 25.03.2026 08:20
-Branch:  main_sia07
+Version: rev07_002 — 27.03.2026 21:10
+Branch:  main_sia08
 
 Chapters:
     1. Imports
@@ -61,6 +61,30 @@ OEM_SUFFIX_MAP = {
     "_SIA": "Internal",
 }
 
+# Canonical PartSeek part types (specific -> generic order)
+PART_TYPE_KEYWORDS = [
+    ("flange_screw", ["flange screw", "flanschschraube", "bundschraube", "hex flange"]),
+    ("threaded_insert", ["threaded insert", "gewindeeinsatz", "insert nut", "helicoil"]),
+    ("rivet", ["rivet", "blind rivet", "niet", "nietmutter"]),
+    ("washer", ["washer", "scheibe", "unterlegscheibe", "federscheibe"]),
+    ("nut", ["nut", "mutter", "sechskantmutter", "hex nut"]),
+    ("bolt", ["bolt", "bolzen", "hex bolt", "schraubbolzen"]),
+    ("screw", ["screw", "schraube", "torx", "innensechskant", "socket head"]),
+    ("bracket", ["bracket", "winkel", "clip", "clamp", "halter"]),
+]
+
+# Which result types are still acceptable for a specific query intent
+PART_TYPE_COMPATIBILITY = {
+    "flange_screw": {"flange_screw", "screw", "bolt"},
+    "screw": {"screw", "flange_screw", "bolt"},
+    "bolt": {"bolt", "screw", "flange_screw"},
+    "nut": {"nut", "threaded_insert"},
+    "washer": {"washer"},
+    "rivet": {"rivet"},
+    "threaded_insert": {"threaded_insert", "nut"},
+    "bracket": {"bracket"},
+}
+
 
 # ─────────────────────────────────────────────────────
 # 3. HELPER FUNCTIONS
@@ -74,6 +98,51 @@ def get_confidence_signal(score: float) -> str:
         return "YELLOW"
     else:
         return "RED"
+
+
+def infer_part_type(text: str) -> str | None:
+    """Infer canonical part type from free text using domain keywords."""
+    text_low = (text or "").lower()
+    for part_type, keywords in PART_TYPE_KEYWORDS:
+        if any(kw in text_low for kw in keywords):
+            return part_type
+    return None
+
+
+def rerank_by_part_type(results: list[dict], query: str) -> list[dict]:
+    """
+    Re-rank semantic results using query intent vs inferred part type.
+    This compensates for broad categories like Supplier-Fastener.
+    """
+    query_type = infer_part_type(query)
+    if not query_type:
+        return results
+
+    compatible = PART_TYPE_COMPATIBILITY.get(query_type, {query_type})
+
+    for r in results:
+        result_type = r.get("part_type")
+        adjusted = r.get("score", 0.0)
+
+        if result_type == query_type:
+            adjusted += 0.14
+        elif result_type in compatible:
+            adjusted += 0.07
+        elif result_type is None:
+            adjusted -= 0.03
+        else:
+            adjusted -= 0.12
+
+        # Keep score in [0, 1] after type-based adjustment.
+        r["score"] = round(max(0.0, min(1.0, adjusted)), 4)
+        r["signal"] = get_confidence_signal(r["score"])
+        r["query_type"] = query_type
+
+    results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    for i, r in enumerate(results, start=1):
+        r["rank"] = i
+
+    return results
 
 
 # 3.2 format_part_result
@@ -136,6 +205,12 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
             oem_real = real
             break
 
+    part_type = infer_part_type(" ".join([
+        text,
+        metadata.get("filename", ""),
+        metadata.get("category", "")
+    ]))
+
     return {
         "rank":           rank,
         "score":          similarity,
@@ -147,6 +222,7 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
         "module":         metadata.get("module", ""),
         "page":           metadata.get("page", 0),
         "norm":           norm,
+        "part_type":      part_type,
         "thread_size":    thread_size,
         "strength_class": strength_class,
         "drive_type":     drive_type,
@@ -210,6 +286,8 @@ def search_part(
     )):
         results.append(format_part_result(text, meta, dist, rank=i+1))
 
+    results = rerank_by_part_type(results, query)
+
     if verbose:
         print(f"Query:    {query}")
         print(f"Results:  {len(results)}")
@@ -234,6 +312,8 @@ def search_part_with_filter(
     query: str,
     oem_code: str = None,
     thread_size: str = None,
+    category: str = None,
+    module: str = None,
     n_results: int = N_RESULTS,
     verbose: bool = True
 ) -> list[dict]:
@@ -247,10 +327,15 @@ def search_part_with_filter(
     """
     collection = get_collection()
 
-    # Always filter by module — add optional filters on top
-    where = {"module": MODULE}
+    # Always filter by module — add optional filters on top.
+    # module can be overridden for focused tracks (e.g. REQUIREMENT).
+    module_filter = module or MODULE
+    clauses = [{"module": module_filter}]
     if oem_code:
-        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}]}
+        clauses.append({"oem_code": oem_code})
+    if category:
+        clauses.append({"category": category})
+    where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
 
     start = time.time()
     raw = collection.query(
@@ -275,9 +360,14 @@ def search_part_with_filter(
 
         results.append(result)
 
+    results = rerank_by_part_type(results, query)
+
     if verbose:
         print(f"Query:    {query}")
-        print(f"Filter:   oem={oem_code or 'all'} thread={thread_size or 'all'}")
+        print(
+            f"Filter:   module={module_filter} "
+            f"oem={oem_code or 'all'} category={category or 'all'} thread={thread_size or 'all'}"
+        )
         print(f"Results:  {len(results)}")
         print(f"Time:     {elapsed}ms")
         print()

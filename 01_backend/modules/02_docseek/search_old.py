@@ -4,8 +4,8 @@ search.py — KnowSeek.Ai — DocSeek Module
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev06_001 — 25.03.2026 00:16
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -13,32 +13,12 @@ Chapters:
     3. Helper Functions
         3.1 get_confidence_signal()
         3.2 format_result()
-        3.3 check_domain_relevance()
-        3.4 rerank_with_bm25()
     4. Main Functions
         4.1 get_collection()
         4.2 search()
         4.3 search_with_filter()
         4.4 search_multi()
     5. Run
-
-Hybrid Search Strategy (rev06_002):
-    Step 1 — Domain Check:
-        Query has no domain keywords → RED immediately
-        No ChromaDB or llama3 call needed → faster
-
-    Step 2 — ChromaDB Semantic Search:
-        Find top N chunks by vector similarity
-
-    Step 3 — BM25 Reranking:
-        Score returned chunks by keyword match
-        BM25 = 0 → no keywords matched → RED
-        BM25 > 0 → keywords found → keep original signal
-
-    Why this works:
-        ChromaDB answers: "Which chunk is most similar?"
-        BM25 answers:     "Does this query match our knowledge?"
-        Combined:         Accurate + fast + no extra LLM call
 """
 
 
@@ -51,7 +31,6 @@ from pathlib import Path
 
 import chromadb
 from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
-from rank_bm25 import BM25Okapi
 
 
 # ─────────────────────────────────────────────────────
@@ -67,28 +46,6 @@ N_RESULTS       = 5
 THRESHOLD_GREEN  = 0.85   # > 85% → 🟢 Reliable
 THRESHOLD_YELLOW = 0.60   # 60-85% → 🟡 Check source
 
-# Domain keywords — automotive engineering
-# If NONE of these appear in query → RED immediately
-DOMAIN_KEYWORDS = [
-    # Corrosion
-    "corrosion", "salt spray", "ktl", "aging", "rust",
-    "korrosion", "salzsprüh", "korrosionsschutz",
-    # Painting / Coating
-    "paint", "coating", "e-coat", "zinc", "zink",
-    "beschichtung", "lackierung", "phosphat",
-    # Standards / Norms
-    "oem", "norm", "standard", "spec", "requirement",
-    "anforderung", "lastenheft", "din", "iso", "mbn", "vda",
-    # Parts
-    "screw", "bolt", "nut", "flange", "torx", "hex",
-    "schraube", "mutter", "flansch", "bracket", "winkel",
-    # Test methods
-    "test", "prüf", "cyclic", "spray", "humidity",
-    "temperature", "duration", "hours", "weeks",
-    # OEM names (anonymized)
-    "oem-g", "oem-m", "oem-z", "oem-h", "oem-s",
-]
-
 
 # ─────────────────────────────────────────────────────
 # 3. HELPER FUNCTIONS
@@ -97,9 +54,9 @@ DOMAIN_KEYWORDS = [
 # 3.1 get_confidence_signal
 def get_confidence_signal(score: float) -> str:
     """
-    Convert similarity score to traffic light signal.
+    Convert a similarity score to a traffic light signal.
     ChromaDB cosine distance: 0 = identical, 2 = opposite
-    Converted to similarity: 1 - (distance / 2)
+    We convert to similarity: 1 - (distance / 2)
     """
     if score >= THRESHOLD_GREEN:
         return "GREEN"
@@ -131,58 +88,6 @@ def format_result(text: str, metadata: dict, distance: float, rank: int) -> dict
         "doc_type":   metadata.get("doc_type", ""),
         "language":   metadata.get("language", ""),
     }
-
-
-# 3.3 check_domain_relevance
-def check_domain_relevance(query: str) -> bool:
-    """
-    Check if query contains automotive domain keywords.
-    Returns False → RED immediately, no ChromaDB call needed.
-    Returns True  → proceed with semantic search.
-
-    This is Step 1 of the Hybrid Search pipeline.
-    Prevents nonsense queries from getting YELLOW signal.
-    """
-    query_lower = query.lower()
-    return any(kw in query_lower for kw in DOMAIN_KEYWORDS)
-
-
-# 3.4 rerank_with_bm25
-def rerank_with_bm25(query: str, results: list[dict]) -> list[dict]:
-    """
-    Rerank ChromaDB results using BM25 keyword scoring.
-    This is Step 3 of the Hybrid Search pipeline.
-
-    BM25 = 0.0 → no keywords matched in chunk → override to RED
-    BM25 > 0.0 → keywords found → keep original ChromaDB signal
-
-    Why BM25 after ChromaDB:
-        ChromaDB: "Which chunk is most similar?" (relative)
-        BM25:     "Does this query match the chunk?" (absolute)
-        Combined: Best of both worlds
-
-    Usage:
-        results = search_chromadb(query)
-        results = rerank_with_bm25(query, results)
-    """
-    if not results:
-        return results
-
-    # Tokenize all chunks
-    corpus = [r["text"].lower().split() for r in results]
-    bm25   = BM25Okapi(corpus)
-
-    # Score query against all chunks
-    scores = bm25.get_scores(query.lower().split())
-
-    for i, r in enumerate(results):
-        r["bm25_score"] = round(float(scores[i]), 3)
-
-        # Override signal if BM25 = 0 (no keywords matched)
-        if scores[i] == 0.0:
-            r["signal"] = "RED"
-
-    return results
 
 
 # ─────────────────────────────────────────────────────
@@ -220,50 +125,24 @@ def search(
     verbose: bool = True
 ) -> list[dict]:
     """
-    Hybrid search: Domain Check → ChromaDB → BM25 Reranking.
+    Search ChromaDB for DocSeek chunks only.
     Always filters by module="docseek".
-
-    Step 1: Domain Check — no keywords → RED immediately
-    Step 2: ChromaDB Semantic Search — find similar chunks
-    Step 3: BM25 Reranking — keyword validation
 
     Usage:
         results = search("salt spray test OEM-V")
         results = search("Korrosionsanforderungen", n_results=3)
     """
     start = time.time()
-
-    # Step 1 — Domain Check
-    if not check_domain_relevance(query):
-        elapsed = round((time.time() - start) * 1000, 1)
-        if verbose:
-            print(f"Query:    {query}")
-            print(f"Signal:   🔴 RED — no domain keywords found")
-            print(f"Time:     {elapsed}ms")
-        return [{
-            "rank":       1,
-            "score":      0.0,
-            "signal":     "RED",
-            "bm25_score": 0.0,
-            "text":       "Query contains no automotive domain keywords.",
-            "filename":   "",
-            "page":       0,
-            "source_id":  "",
-            "oem_code":   "",
-            "category":   "",
-            "module":     MODULE,
-            "doc_type":   "",
-            "language":   "",
-        }]
-
-    # Step 2 — ChromaDB Semantic Search
     collection = get_collection()
+
     raw = collection.query(
         query_texts=[query],
         n_results=n_results,
         where={"module": MODULE},
         include=["documents", "metadatas", "distances"]
     )
+
+    elapsed = round((time.time() - start) * 1000, 1)
 
     results = []
     for i, (text, meta, dist) in enumerate(zip(
@@ -273,11 +152,6 @@ def search(
     )):
         results.append(format_result(text, meta, dist, rank=i+1))
 
-    # Step 3 — BM25 Reranking
-    results = rerank_with_bm25(query, results)
-
-    elapsed = round((time.time() - start) * 1000, 1)
-
     if verbose:
         print(f"Query:    {query}")
         print(f"Results:  {len(results)}")
@@ -285,8 +159,7 @@ def search(
         print()
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
-            bm25        = r.get("bm25_score", "?")
-            print(f"  [{r['rank']}] {signal_icon} semantic={r['score']:.3f} bm25={bm25} — {r['filename']} p.{r['page']}")
+            print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — {r['filename']} p.{r['page']}")
             print(f"       {r['text'][:120]}...")
             print()
 
@@ -302,23 +175,16 @@ def search_with_filter(
     verbose: bool = True
 ) -> list[dict]:
     """
-    Hybrid search with additional metadata filters.
-    Always includes module="docseek" + Domain Check + BM25.
+    Search DocSeek with additional metadata filters.
+    Always includes module="docseek" filter.
 
     Usage:
         results = search_with_filter("salt spray", oem_code="OEM-V")
         results = search_with_filter("coating", category="Painting")
     """
-    # Step 1 — Domain Check
-    if not check_domain_relevance(query):
-        if verbose:
-            print(f"Query:  {query}")
-            print(f"Signal: 🔴 RED — no domain keywords found")
-        return []
-
-    # Step 2 — ChromaDB with filters
     collection = get_collection()
 
+    # Always filter by module — add optional filters on top
     where = {"module": MODULE}
     if oem_code and category:
         where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}, {"category": category}]}
@@ -328,7 +194,7 @@ def search_with_filter(
         where = {"$and": [{"module": MODULE}, {"category": category}]}
 
     start = time.time()
-    raw   = collection.query(
+    raw = collection.query(
         query_texts=[query],
         n_results=n_results,
         where=where,
@@ -344,9 +210,6 @@ def search_with_filter(
     )):
         results.append(format_result(text, meta, dist, rank=i+1))
 
-    # Step 3 — BM25 Reranking
-    results = rerank_with_bm25(query, results)
-
     if verbose:
         filter_info = f"oem={oem_code or 'all'} category={category or 'all'}"
         print(f"Query:    {query}")
@@ -356,7 +219,7 @@ def search_with_filter(
         print()
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
-            print(f"  [{r['rank']}] {signal_icon} semantic={r['score']:.3f} bm25={r.get('bm25_score','?')} — {r['filename']} p.{r['page']}")
+            print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — {r['filename']} p.{r['page']}")
 
     return results
 
@@ -368,8 +231,8 @@ def search_multi(
     verbose: bool = True
 ) -> dict[str, list[dict]]:
     """
-    Run multiple queries — for OEM comparison.
-    Each query goes through full hybrid search pipeline.
+    Run multiple queries at once — for OEM comparison.
+    Returns dict with query as key and results as value.
 
     Usage:
         results = search_multi([
@@ -397,22 +260,17 @@ def search_multi(
 if __name__ == "__main__":
 
     print("=" * 50)
-    print("TEST 1 — Domain Check (should be RED)")
-    print("=" * 50)
-    results = search("bitcoin cryptocurrency stock market")
-
-    print("=" * 50)
-    print("TEST 2 — Salt Spray (should be YELLOW/GREEN)")
+    print("TEST 1 — Basic Search")
     print("=" * 50)
     results = search("salt spray test corrosion requirements")
 
     print("=" * 50)
-    print("TEST 3 — Filtered Search")
+    print("TEST 2 — Filtered Search (Painting only)")
     print("=" * 50)
     results = search_with_filter("coating standard", category="Painting")
 
     print("=" * 50)
-    print("TEST 4 — Multi Search")
+    print("TEST 3 — Multi Search (OEM Comparison)")
     print("=" * 50)
     results = search_multi([
         "corrosion performance standard",

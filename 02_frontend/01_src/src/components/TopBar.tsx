@@ -158,8 +158,8 @@ const TopBar: React.FC<TopBarProps> = ({ moduleColor, isProcessing = false }) =>
             fontSize: 10,
             letterSpacing: 3,
             textTransform: 'uppercase' as const,
-            color: '#334155',
-            fontWeight: 400,
+            color: '#6A7D93',
+            fontWeight: 500,
           }}
         >
           NOTHING IS IMPOSSIBLE.
@@ -175,11 +175,11 @@ const TopBar: React.FC<TopBarProps> = ({ moduleColor, isProcessing = false }) =>
             fontSize: 10,
             letterSpacing: 3,
             textTransform: 'uppercase' as const,
-            color: '#334155',
-            fontWeight: 400,
+            color: '#6A7D93',
+            fontWeight: 500,
           }}
         >
-          START WITH WHAT YOU KNOW.
+          USE YOUR KNOWLEDGE.
         </span>
       </div>
 
