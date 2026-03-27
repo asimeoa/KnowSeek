@@ -81,7 +81,15 @@ const SearchBlock: React.FC<SearchBlockProps> = ({ moduleId, onSearch, hasResult
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                const nextValue = e.target.value;
+                setQuery(nextValue);
+
+                // Important: propagate empty query so module views can reset to initial state.
+                if (!nextValue.trim()) {
+                  onSearch('');
+                }
+              }}
               placeholder={placeholders[moduleId]}
               className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground/60"
             />

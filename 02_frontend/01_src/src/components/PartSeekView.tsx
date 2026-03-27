@@ -4,13 +4,13 @@
  * Shows search results with confidence scores
  * Connected to real backend API
  *
- * Version: rev06_002
- * Branch:  main_sia07
- * Date:    26.03.2026 09:00
+ * Version: rev07_002
+ * Branch:  main_sia08
+ * Date:    27.03.2026 21:10
  * Status:  Connected to real API - NO MOCK DATA
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, Loader2 } from 'lucide-react';
 
@@ -59,56 +59,598 @@ const signalColor = {
   RED:    '#EF4444',
 };
 
+type FocusTrack = 'FASTENER' | 'BRACKET' | 'OEM_NORM';
+
+type FocusLeaf = {
+  key: string;
+  label: string;
+  token: string;
+};
+
+type FocusBranch = {
+  key: string;
+  label: string;
+  hint: string;
+  leaves: FocusLeaf[];
+};
+
+const TRACK_TREE: Record<FocusTrack, FocusBranch[]> = {
+  FASTENER: [
+    {
+      key: 'thread',
+      label: 'Thread size',
+      hint: 'Choose a thread class',
+      leaves: [
+        { key: 'm6', label: 'M6', token: 'm6 screw fastener' },
+        { key: 'm8', label: 'M8', token: 'm8 screw fastener' },
+        { key: 'm10', label: 'M10', token: 'm10 screw fastener' },
+        { key: 'm12', label: 'M12', token: 'm12 screw fastener' },
+        { key: 'm16', label: 'M16', token: 'm16 screw fastener' },
+      ],
+    },
+    {
+      key: 'strength',
+      label: 'Strength class',
+      hint: 'Choose a class',
+      leaves: [
+        { key: '8.8', label: '8.8', token: 'screw strength class 8.8' },
+        { key: '10.9', label: '10.9', token: 'screw strength class 10.9' },
+        { key: '12.9', label: '12.9', token: 'screw strength class 12.9' },
+      ],
+    },
+    {
+      key: 'drive',
+      label: 'Driver type',
+      hint: 'Choose head driver',
+      leaves: [
+        { key: 'torx', label: 'Torx', token: 'torx driver screw fastener' },
+        { key: 'hex', label: 'Hex', token: 'hex driver screw fastener' },
+        { key: 'innensechskant', label: 'Innensechskant', token: 'innensechskant screw fastener' },
+      ],
+    },
+    {
+      key: 'coating',
+      label: 'Coating',
+      hint: 'Choose coating type',
+      leaves: [
+        { key: 'zinc', label: 'Zinc', token: 'zinc coated screw fastener' },
+        { key: 'ktl', label: 'KTL', token: 'ktl coated screw fastener' },
+        { key: 'geomet', label: 'Geomet', token: 'geomet coated screw fastener' },
+      ],
+    },
+    {
+      key: 'self-locking',
+      label: 'Self-locking',
+      hint: 'Choose locking behavior',
+      leaves: [
+        { key: 'microcapsule', label: 'Micro-encapsulated', token: 'micro encapsulated self locking screw' },
+        { key: 'prevailing-torque', label: 'Prevailing torque', token: 'prevailing torque self locking screw' },
+        { key: 'no-lock', label: 'No self-locking', token: 'standard screw no self locking' },
+      ],
+    },
+  ],
+  BRACKET: [
+    {
+      key: 'shape',
+      label: 'Shape',
+      hint: 'Choose bracket shape',
+      leaves: [
+        { key: 'l-shape-with-holes', label: 'L-shape with holes', token: 'l-shape bracket with holes' },
+        { key: 'l-shape-without-holes', label: 'L-shape without holes', token: 'l-shape bracket without holes' },
+      ],
+    },
+    {
+      key: 'clip',
+      label: 'Clip type',
+      hint: 'Choose clip behavior',
+      leaves: [
+        { key: 'spring', label: 'Spring clip', token: 'spring clip bracket' },
+        { key: 'fixed', label: 'Fixed clip', token: 'fixed clip bracket' },
+      ],
+    },
+  ],
+  OEM_NORM: [
+    {
+      key: 'norm-family',
+      label: 'Norm family',
+      hint: 'Select norm type',
+      leaves: [
+        { key: 'mbn', label: 'MBN', token: 'mbn fastener norm requirements' },
+        { key: 'din', label: 'DIN', token: 'din fastener norm requirements' },
+        { key: 'iso', label: 'ISO', token: 'iso fastener norm requirements' },
+      ],
+    },
+    {
+      key: 'oem',
+      label: 'OEM',
+      hint: 'Choose OEM family',
+      leaves: [
+        { key: 'oem-g', label: 'OEM-G', token: 'oem-g fastener norm' },
+        { key: 'oem-m', label: 'OEM-M', token: 'oem-m fastener norm' },
+        { key: 'oem-z', label: 'OEM-Z', token: 'oem-z fastener norm' },
+      ],
+    },
+  ],
+};
+
+function inferTrack(query: string): FocusTrack | null {
+  const q = query.toLowerCase();
+  if (/(mbn|din|iso|norm|standard)/.test(q)) return 'OEM_NORM';
+  if (/(bracket|clip|l-shape|halter|winkel)/.test(q)) return 'BRACKET';
+  if (/(screw|bolt|fastener|thread|m6|m8|m10|m12|m16|torx|hex|innensechskant|strength|8\.8|10\.9|12\.9)/.test(q)) return 'FASTENER';
+  return null;
+}
+
+function inferBranchKey(track: FocusTrack, query: string): string | null {
+  const q = query.toLowerCase();
+  if (track === 'FASTENER') {
+    if (/(m6|m8|m10|m12|m16|thread)/.test(q)) return 'thread';
+    if (/(8\.8|10\.9|12\.9|strength|class)/.test(q)) return 'strength';
+    if (/(torx|hex|innensechskant|drive)/.test(q)) return 'drive';
+    if (/(zinc|zink|ktl|geomet|coating)/.test(q)) return 'coating';
+    if (/(self lock|self-lock|micro|prevailing torque|locking)/.test(q)) return 'self-locking';
+  }
+  if (track === 'BRACKET') {
+    if (/(l-shape|holes|without holes|shape|winkel)/.test(q)) return 'shape';
+    if (/(clip|spring|fixed)/.test(q)) return 'clip';
+  }
+  if (track === 'OEM_NORM') {
+    if (/(mbn|din|iso|norm)/.test(q)) return 'norm-family';
+    if (/(oem-g|oem-m|oem-z|mercedes|gm|volvo)/.test(q)) return 'oem';
+  }
+  return null;
+}
+
+function inferLeaf(track: FocusTrack, branchKey: string, query: string): FocusLeaf | null {
+  const branch = TRACK_TREE[track].find((item) => item.key === branchKey);
+  if (!branch) return null;
+  const q = query.toLowerCase();
+
+  const keyMap: Record<string, RegExp> = {
+    m6: /\bm6\b/,
+    m8: /\bm8\b/,
+    m10: /\bm10\b/,
+    m12: /\bm12\b/,
+    m16: /\bm16\b/,
+    '8.8': /\b8\.8\b/,
+    '10.9': /\b10\.9\b/,
+    '12.9': /\b12\.9\b/,
+    torx: /torx/,
+    hex: /\bhex\b/,
+    innensechskant: /innensechskant/,
+    zinc: /zinc|zink/,
+    ktl: /ktl/,
+    geomet: /geomet/,
+    microcapsule: /micro/,
+    'prevailing-torque': /prevailing torque/,
+    'no-lock': /no self locking|no self-locking/,
+    'l-shape-with-holes': /l-shape.*holes|with holes/,
+    'l-shape-without-holes': /l-shape.*without holes|without holes/,
+    spring: /spring/,
+    fixed: /fixed/,
+    mbn: /\bmbn\b/,
+    din: /\bdin\b/,
+    iso: /\biso\b/,
+    'oem-g': /oem-g|mercedes/,
+    'oem-m': /oem-m|\bgm\b/,
+    'oem-z': /oem-z|volvo/,
+  };
+
+  const matched = branch.leaves.find((leaf) => {
+    const matcher = keyMap[leaf.key];
+    return matcher ? matcher.test(q) : false;
+  });
+
+  return matched ?? null;
+}
+
+function getTrackCategory(track: FocusTrack): string {
+  if (track === 'FASTENER') return 'Supplier-Fastener';
+  if (track === 'BRACKET') return 'Bracket';
+  return 'OEM-Fastener';
+}
+
 const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
   const [dragOver, setDragOver]   = useState(false);
   const [loading, setLoading]     = useState(false);
   const [apiData, setApiData]     = useState<ApiResponse | null>(null);
   const [lastQuery, setLastQuery] = useState('');
-  const hasQuery = query.length > 0;
+  const [hasInitialRequest, setHasInitialRequest] = useState(false);
+  const [hasImageUpload, setHasImageUpload] = useState(false);
+  const [showCollapsedIcon, setShowCollapsedIcon] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<FocusTrack | null>(null);
+  const [selectedBranchKey, setSelectedBranchKey] = useState<string | null>(null);
+  const [selectedLeaf, setSelectedLeaf] = useState<FocusLeaf | null>(null);
+  const normalizedQuery = query.trim();
+  const hasQuery = normalizedQuery.length > 0;
+  const showRefineArea = hasInitialRequest && (hasQuery || hasImageUpload);
+
+  const effectiveQuery = useMemo(() => {
+    if (!hasQuery) return '';
+    const parts: string[] = [normalizedQuery];
+    if (selectedLeaf?.token) parts.push(selectedLeaf.token);
+    return parts.join(' ').trim();
+  }, [hasQuery, normalizedQuery, selectedLeaf]);
+
+  const level2Branches = useMemo(() => {
+    if (!selectedTrack) return [] as FocusBranch[];
+    return TRACK_TREE[selectedTrack];
+  }, [selectedTrack]);
+
+  const selectedBranch = useMemo(() => {
+    if (!selectedBranchKey) return null;
+    return level2Branches.find((b) => b.key === selectedBranchKey) ?? null;
+  }, [level2Branches, selectedBranchKey]);
+
+  const completedSteps =
+    (selectedTrack ? 1 : 0) +
+    (selectedBranchKey ? 1 : 0) +
+    (selectedLeaf ? 1 : 0);
+
+  const canGoBackStep = completedSteps > 0;
+  const canGoForwardStep = completedSteps < 3;
+
+  const handleBackStep = () => {
+    if (selectedLeaf) {
+      setSelectedLeaf(null);
+    } else if (selectedBranchKey) {
+      setSelectedBranchKey(null);
+      setSelectedLeaf(null);
+    } else if (selectedTrack) {
+      setSelectedTrack(null);
+      setSelectedBranchKey(null);
+      setSelectedLeaf(null);
+    }
+    setApiData(null);
+    setLastQuery('');
+  };
+
+  const handleForwardStep = () => {
+    if (!selectedTrack) {
+      setSelectedTrack('FASTENER');
+      setSelectedBranchKey(null);
+      setSelectedLeaf(null);
+    } else if (!selectedBranchKey) {
+      const firstBranch = TRACK_TREE[selectedTrack][0];
+      setSelectedBranchKey(firstBranch?.key ?? null);
+      setSelectedLeaf(null);
+    } else if (!selectedLeaf) {
+      const branch = TRACK_TREE[selectedTrack].find((b) => b.key === selectedBranchKey);
+      const firstLeaf = branch?.leaves?.[0] ?? null;
+      setSelectedLeaf(firstLeaf);
+    }
+    setApiData(null);
+    setLastQuery('');
+  };
+
+  React.useEffect(() => {
+    if (!hasQuery) return;
+    const inferredTrack = inferTrack(normalizedQuery);
+    const inferredBranch = inferredTrack ? inferBranchKey(inferredTrack, normalizedQuery) : null;
+    const inferredLeaf = inferredTrack && inferredBranch ? inferLeaf(inferredTrack, inferredBranch, normalizedQuery) : null;
+    setSelectedTrack(inferredTrack);
+    setSelectedBranchKey(inferredBranch);
+    setSelectedLeaf(inferredLeaf);
+    setApiData(null);
+    setLastQuery('');
+  }, [query]);
+
+  React.useEffect(() => {
+    // If user clears all search input, return fully to the initial upload state.
+    if (!hasQuery) {
+      setSelectedTrack(null);
+      setSelectedBranchKey(null);
+      setSelectedLeaf(null);
+      setApiData(null);
+      setLastQuery('');
+      setLoading(false);
+      setHasImageUpload(false);
+      setHasInitialRequest(false);
+      setShowCollapsedIcon(false);
+    }
+  }, [hasQuery]);
+
+  React.useEffect(() => {
+    // Keep the upload-area collapse behavior independent from track selection.
+    setHasInitialRequest(hasQuery || hasImageUpload);
+  }, [hasQuery, hasImageUpload]);
+
+  React.useEffect(() => {
+    if (!showRefineArea) {
+      setShowCollapsedIcon(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowCollapsedIcon(true);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [showRefineArea]);
 
   // Fetch from API when query changes
   React.useEffect(() => {
-    if (!hasQuery || query === lastQuery) return;
-    setLastQuery(query);
-    setLoading(true);
-    setApiData(null);
+    if (!hasQuery || !effectiveQuery || !selectedTrack || !selectedLeaf || effectiveQuery === lastQuery) return;
 
-    fetch(`${API_URL}/api/partseek/query`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ question: query }),
-    })
-      .then(r => r.json())
-      .then(data => { setApiData(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [query]);
+    const timer = window.setTimeout(() => {
+      setHasInitialRequest(true);
+      setLastQuery(effectiveQuery);
+      setLoading(true);
+      setApiData(null);
 
+      const body = {
+        question: effectiveQuery,
+        module: 'partseek',
+        category: getTrackCategory(selectedTrack),
+      };
+
+      fetch(`${API_URL}/api/partseek/query`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      })
+        .then(r => r.json())
+        .then(data => {
+          setApiData(data as ApiResponse);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [hasQuery, effectiveQuery, lastQuery, selectedTrack]);
+
+  const showTrackSwitch = hasQuery && !selectedTrack;
+  const showBranchSwitch = hasQuery && !!selectedTrack && !selectedBranchKey;
+  const showLeafSwitch = hasQuery && !!selectedTrack && !!selectedBranchKey && !selectedLeaf;
   const results = apiData?.results ?? [];
-
   return (
     <div className="w-full max-w-2xl mx-auto mt-4">
 
-      {/* Image Upload Zone */}
-      <div
-        className={`mb-5 rounded-xl border-2 border-dashed p-6 text-center transition-all duration-300 ${dragOver ? 'scale-[1.01]' : ''}`}
-        style={{
-          borderColor: dragOver ? '#0EA5E9' : '#0EA5E966',
-          background:  dragOver ? '#0EA5E90F' : 'transparent',
-        }}
-        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={e => { e.preventDefault(); setDragOver(false); }}
+      <motion.div
+        layout
+        transition={{ type: 'spring', stiffness: 180, damping: 34, mass: 0.95 }}
+        className="mb-5"
       >
-        <Upload size={20} className="mx-auto mb-2" style={{ color: '#0EA5E9' }} />
-        <p className="text-xs" style={{ color: '#0EA5E9' }}>Or upload a photo of the part</p>
-        <p className="text-[10px] text-muted-foreground mt-1">Drag and drop or click to browse</p>
-      </div>
+        <div className="relative">
+          <motion.div
+            layout
+            transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1] }}
+            className={`rounded-xl border-2 border-dashed text-center ${dragOver ? 'scale-[1.01]' : ''} w-full overflow-hidden relative ${showRefineArea ? 'py-0.5 px-3' : 'p-6'}`}
+            style={{
+              minHeight: showRefineArea ? 37 : 116,
+              borderColor: showRefineArea ? '#6B728055' : (dragOver ? '#0EA5E9' : '#0EA5E966'),
+              background: showRefineArea ? 'transparent' : (dragOver ? '#0EA5E90F' : 'transparent'),
+              zIndex: 2,
+            }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => {
+              e.preventDefault();
+              setDragOver(false);
+              setHasImageUpload(true);
+              setHasInitialRequest(true);
+            }}
+          >
+            <motion.div
+              animate={{ x: showRefineArea ? 0 : 0 }}
+              transition={{ duration: 1.2, ease: [0.22, 0.61, 0.36, 1] }}
+              className={`flex ${showRefineArea ? 'justify-end items-center min-h-[37px] pr-1' : 'justify-center items-center flex-col'}`}
+            >
+              {!showRefineArea && (
+                <>
+                  <Upload size={20} className="mx-auto mb-2" style={{ color: '#0EA5E9' }} />
+                  <p className="text-xs" style={{ color: '#0EA5E9' }}>Or upload a photo of the part</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">Drag and drop or click to browse</p>
+                </>
+              )}
+
+              {showRefineArea && showCollapsedIcon && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.75, ease: [0.22, 0.61, 0.36, 1] }}
+                  className="flex items-center gap-2"
+                >
+                  <span className="text-[10px]" style={{ color: '#9CA3AF' }}>
+                    Clear search info to activate upload window
+                  </span>
+                  <Upload size={18} style={{ color: '#9CA3AF' }} />
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+
+        </div>
+      </motion.div>
+
+      {hasQuery && (
+        <div className="mb-4 rounded-xl p-3" style={{ border: '1px solid #0EA5E933', background: '#0EA5E90D' }}>
+          <div className="flex items-start justify-between mb-2">
+            <p className="text-xs font-semibold" style={{ color: '#0EA5E9' }}>
+              Focus track (Gleis): choose search intent before final retrieval
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleBackStep}
+                disabled={!canGoBackStep}
+                className="h-6 w-6 rounded-md border text-xs font-bold"
+                style={{
+                  borderColor: canGoBackStep ? '#0EA5E966' : '#6B728044',
+                  color: canGoBackStep ? '#0EA5E9' : '#6B7280',
+                  background: canGoBackStep ? '#0EA5E914' : 'transparent',
+                  cursor: canGoBackStep ? 'pointer' : 'not-allowed',
+                }}
+                aria-label="Back step"
+                title="Back"
+              >
+                {'<'}
+              </button>
+              <button
+                type="button"
+                onClick={handleForwardStep}
+                disabled={!canGoForwardStep}
+                className="h-6 w-6 rounded-md border text-xs font-bold"
+                style={{
+                  borderColor: canGoForwardStep ? '#0EA5E966' : '#6B728044',
+                  color: canGoForwardStep ? '#0EA5E9' : '#6B7280',
+                  background: canGoForwardStep ? '#0EA5E914' : 'transparent',
+                  cursor: canGoForwardStep ? 'pointer' : 'not-allowed',
+                }}
+                aria-label="Next step"
+                title="Next"
+              >
+                {'>'}
+              </button>
+            </div>
+          </div>
+          {showTrackSwitch && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTrack('FASTENER');
+                setSelectedBranchKey(null);
+                setSelectedLeaf(null);
+                setApiData(null);
+                setLastQuery('');
+              }}
+              className="rounded-md border px-3 py-2 text-xs text-left"
+              style={{
+                borderColor: selectedTrack === 'FASTENER' ? '#0EA5E9' : '#0EA5E944',
+                background: selectedTrack === 'FASTENER' ? '#0EA5E922' : 'transparent',
+                color: selectedTrack === 'FASTENER' ? '#0EA5E9' : '#C7CDD6',
+              }}
+            >
+              FASTENER · Supplier fasteners
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTrack('BRACKET');
+                setSelectedBranchKey(null);
+                setSelectedLeaf(null);
+                setApiData(null);
+                setLastQuery('');
+              }}
+              className="rounded-md border px-3 py-2 text-xs text-left"
+              style={{
+                borderColor: selectedTrack === 'BRACKET' ? '#0EA5E9' : '#0EA5E944',
+                background: selectedTrack === 'BRACKET' ? '#0EA5E922' : 'transparent',
+                color: selectedTrack === 'BRACKET' ? '#0EA5E9' : '#C7CDD6',
+              }}
+            >
+              BRACKET · Mounting parts
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedTrack('OEM_NORM');
+                setSelectedBranchKey(null);
+                setSelectedLeaf(null);
+                setApiData(null);
+                setLastQuery('');
+              }}
+              className="rounded-md border px-3 py-2 text-xs text-left"
+              style={{
+                borderColor: selectedTrack === 'OEM_NORM' ? '#0EA5E9' : '#0EA5E944',
+                background: selectedTrack === 'OEM_NORM' ? '#0EA5E922' : 'transparent',
+                color: selectedTrack === 'OEM_NORM' ? '#0EA5E9' : '#C7CDD6',
+              }}
+            >
+              OEM NORM · OEM fastener standards
+            </button>
+            </div>
+          )}
+
+          {showBranchSwitch && selectedTrack && (
+            <div className="mt-3 rounded-lg border p-3" style={{ borderColor: '#0EA5E944' }}>
+              <p className="text-[11px] font-semibold mb-2" style={{ color: '#0EA5E9' }}>
+                Level 2: choose one category
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {level2Branches.map((branch) => (
+                  <button
+                    key={branch.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedBranchKey(branch.key);
+                      setSelectedLeaf(null);
+                      setApiData(null);
+                      setLastQuery('');
+                    }}
+                    className="rounded-md border px-3 py-2 text-left"
+                    style={{
+                      borderColor: selectedBranchKey === branch.key ? '#0EA5E9' : '#0EA5E944',
+                      background: selectedBranchKey === branch.key ? '#0EA5E922' : 'transparent',
+                    }}
+                  >
+                    <p className="text-xs font-semibold" style={{ color: selectedBranchKey === branch.key ? '#0EA5E9' : '#C7CDD6' }}>
+                      {branch.label}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">{branch.hint}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showLeafSwitch && selectedBranch && (
+            <div className="mt-3 rounded-lg border p-3" style={{ borderColor: '#0EA5E944' }}>
+              <p className="text-[11px] font-semibold mb-2" style={{ color: '#0EA5E9' }}>
+                Level 3: choose specific filter
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {selectedBranch.leaves.map((leaf) => (
+                  <button
+                    key={leaf.key}
+                    type="button"
+                    onClick={() => {
+                      setSelectedLeaf(leaf);
+                      setApiData(null);
+                      setLastQuery('');
+                    }}
+                    className="rounded-md border px-3 py-2 text-xs text-left"
+                    style={{
+                      borderColor: selectedLeaf?.key === leaf.key ? '#0EA5E9' : '#0EA5E944',
+                      background: selectedLeaf?.key === leaf.key ? '#0EA5E922' : 'transparent',
+                      color: selectedLeaf?.key === leaf.key ? '#0EA5E9' : '#C7CDD6',
+                    }}
+                  >
+                    {leaf.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-3 pt-3 border-t" style={{ borderColor: '#0EA5E933' }}>
+            <p className="text-[11px] font-semibold mb-2" style={{ color: '#0EA5E9' }}>
+              Active setup
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-[10px] px-2 py-1 rounded-md" style={{ background: '#0EA5E91A', color: '#0EA5E9', border: '1px solid #0EA5E933' }}>
+                Track: {selectedTrack ?? 'open'}
+              </span>
+              <span className="text-[10px] px-2 py-1 rounded-md" style={{ background: '#0EA5E91A', color: '#0EA5E9', border: '1px solid #0EA5E933' }}>
+                Category: {selectedBranch?.label ?? 'open'}
+              </span>
+              <span className="text-[10px] px-2 py-1 rounded-md" style={{ background: '#0EA5E91A', color: '#0EA5E9', border: '1px solid #0EA5E933' }}>
+                Detail: {selectedLeaf?.label ?? 'open'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center gap-2 py-8">
           <Loader2 size={18} className="animate-spin" style={{ color: '#0EA5E9' }} />
-          <span className="text-xs" style={{ color: '#0EA5E9' }}>Searching parts...</span>
+          <span className="text-xs" style={{ color: '#0EA5E9' }}>
+            Searching parts...
+          </span>
         </div>
       )}
 
@@ -183,25 +725,25 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
                           {part.thread_size && (
                             <div className="flex justify-between col-span-2">
                               <span style={{ color }}>Thread</span>
-                              <span className="text-foreground font-medium">{part.thread_size}</span>
+                              <span className="text-gray-300 font-medium">{part.thread_size}</span>
                             </div>
                           )}
                           {part.strength_class && (
                             <div className="flex justify-between col-span-2">
                               <span style={{ color }}>Class</span>
-                              <span className="text-foreground font-medium">{part.strength_class}</span>
+                              <span className="text-gray-300 font-medium">{part.strength_class}</span>
                             </div>
                           )}
                           {part.drive_type && (
                             <div className="flex justify-between col-span-2">
-                              <span style={{ color }}>Drive</span>
-                              <span className="text-foreground font-medium">{part.drive_type}</span>
+                              <span style={{ color }}>Driver</span>
+                              <span className="text-gray-300 font-medium">{part.drive_type}</span>
                             </div>
                           )}
                           {part.coating && (
                             <div className="flex justify-between col-span-2">
                               <span style={{ color }}>Coating</span>
-                              <span className="text-foreground font-medium">{part.coating}</span>
+                              <span className="text-gray-300 font-medium">{part.coating}</span>
                             </div>
                           )}
                           {!part.thread_size && !part.strength_class && !part.drive_type && (
@@ -216,7 +758,7 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
                       <div className="sm:w-3/5 p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <h3 className="text-sm font-bold text-foreground">
+                            <h3 className="text-sm font-bold text-gray-300">
                               {part.category} — {part.thread_size ?? 'Part'}
                               {part.strength_class ? ` ${part.strength_class}` : ''}
                             </h3>
@@ -232,30 +774,30 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
                           {part.strength_class && (
                             <div className="flex gap-2">
                               <span className="text-muted-foreground w-20">Strength</span>
-                              <span className="text-foreground">{part.strength_class}</span>
+                              <span className="text-gray-300">{part.strength_class}</span>
                             </div>
                           )}
                           {part.drive_type && (
                             <div className="flex gap-2">
-                              <span className="text-muted-foreground w-20">Drive</span>
-                              <span className="text-foreground">{part.drive_type}</span>
+                              <span className="text-muted-foreground w-20">Driver</span>
+                              <span className="text-gray-300">{part.drive_type}</span>
                             </div>
                           )}
                           {part.coating && (
                             <div className="flex gap-2">
                               <span className="text-muted-foreground w-20">Coating</span>
-                              <span className="text-foreground">{part.coating}</span>
+                              <span className="text-gray-300">{part.coating}</span>
                             </div>
                           )}
                           {part.self_locking && (
                             <div className="flex gap-2">
                               <span className="text-muted-foreground w-20">Self-lock</span>
-                              <span className="text-foreground">✅ Yes</span>
+                              <span className="text-gray-300">✅ Yes</span>
                             </div>
                           )}
                           <div className="flex gap-2">
                             <span className="text-muted-foreground w-20">Score</span>
-                            <span className="text-foreground font-medium">
+                            <span className="text-gray-300 font-medium">
                               {Math.round(part.score * 100)}%
                             </span>
                           </div>
@@ -303,7 +845,7 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
       {/* Not found */}
       {!loading && hasQuery && apiData && !apiData.found && (
         <p className="text-center text-sm text-muted-foreground mt-8">
-          🔴 No parts found for "{query}" — try different search terms.
+          🔴 No parts found for "{effectiveQuery || normalizedQuery}" — try different search terms.
         </p>
       )}
 

@@ -91,18 +91,18 @@
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 2px;
-  background: linear-gradient(180deg, #E2E8F0 0%, #94A3B8 40%, #64748B 100%);
+  background: linear-gradient(180deg, #E2E8F0 0%, #A7B4C5 42%, #7C8FA5 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)) drop-shadow(0 0 8px rgba(203,213,225,0.15));
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.82)) drop-shadow(0 0 8px rgba(71,85,105,0.22));
 }
 
 .metallic-aura {
   position: absolute;
   width: 260px;
   height: 54px;
-  background: radial-gradient(ellipse at center, rgba(100,116,139,0.13) 0%, rgba(100,116,139,0.05) 45%, transparent 72%);
+  background: radial-gradient(ellipse at center, rgba(51,65,85,0.22) 0%, rgba(30,41,59,0.12) 48%, transparent 76%);
   border-radius: 50%;
   pointer-events: none;
   top: 50%;
