@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev07_002 — Last updated: 27.03.2026 21:10 — Branch: main_sia08**
+**Version: rev05_005 — Last updated: 26.03.2026 um 10:14 — Branch: main_sia07**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -120,7 +120,47 @@
 | 26.03 | #22 | Full dress rehearsal | 10 min timed |
 | 26.03 | — | GitHub repo final check | All files in place |
 
-### Technical PPT — Slide Structure (updated)
+
+## Week 3 — Korrekture  + ChromaDB Restructuring (24.03) Issue with chromeDB Architecture
+
+### Completed in main_sia07 ✅
+
+- [x] Backup ChromaDB — `cp -r chroma_db chroma_db_backup_sia05`
+- [x] migrate_chromadb.py — "docseek" → "knowseek" + module field
+- [x] 02_docseek/ingest.py — COLLECTION_NAME + metadata["module"]="docseek"
+- [x] 02_docseek/search.py — COLLECTION_NAME + where module filter
+- [x] 02_docseek/answer.py — COLLECTION_NAME update
+- [x] 01_partseek/search.py — COLLECTION_NAME + where module filter
+- [x] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
+- [x] 01_partseek/answer.py — COLLECTION_NAME update
+- [x] main.py health check — knowseek + chunks per module ✅
+- [ ] EDA Notebook — alle "docseek" → "knowseek" (Ch 1,2,3,4,6)
+- [ ] Verification — curl health + docseek query + partseek query
+- [ ] #16 Frontend mit Backend verbinden
+- [ ] #33 DocSeek 3 OEM comparisons Demo
+- [ ] #34 Risk table correct
+- [ ] #35 Source link clickable
+- [ ] #36 PartSeek text search visualized
+- [ ] #37 Team collision warning
+- [ ] #38 All metadata shown
+- [ ] #27 Technical PPT
+- [ ] Before/After Zeitvergleich — Human 2h vs KnowSeek 3s
+- [ ] ROI Rechnung — 1 day saved per employee per year
+- [ ] #22 Full dress rehearsal 26.03
+- [ ] GitHub repo final check
+
+
+### New Issues 26.03 — main_sia07 🔜
+
+| Issue | Task | Status |
+|-------|------|--------|
+| #53 | Hybrid Search BM25 + Domain Filter — DocSeek search.py rev06_002 | 🔜 In Progress |
+| #54 | EDA Chapter 6.3 — Hybrid Search confidence visualization | 🔜 Backlog |
+| #55 | DocSeekView connected to real API | 🔜 In Progress |
+| #56 | feat: YOLO/LLaVA image search for PartSeek — Phase 2 | 🔜 Backlog |
+| #57 | setup: Install LLaVA — ollama pull llava | 🔜 Backlog |
+
+### Technical PPT — Slide Structure
 
 | Slide | Content |
 |-------|---------|
@@ -175,30 +215,26 @@
 | DocSeekView.tsx | — | 🔜 #42 main_sia08 |
 | Ollama + llama3 | 0.17.7 | ✅ Running |
 | nomic-embed-text | 274MB | ✅ Installed |
-| LLaVA | — | 🔜 #44 ollama pull llava |
-| ChromaDB | 1.5.5 | ✅ knowseek collection |
-| rank-bm25 | 0.2.2 | ✅ Dual role: baseline + hybrid search |
-| MLFlow | 3.10.1 | ✅ Running |
-| 05_data | — | ✅ 39 docs / 121 chunks |
-| ingest.py (DocSeek) | rev06_001 | ✅ knowseek + module field |
-| search.py (DocSeek) | rev06_002 | ✅ Hybrid Search: Domain + ChromaDB + BM25 |
-| answer.py (DocSeek) | rev06_002 | ✅ llama3 only GREEN/YELLOW |
-| ingest.py (PartSeek) | rev06_001 | ✅ wrapper → DocSeek |
-| search.py (PartSeek) | rev06_001 | ✅ module="partseek" filter |
-| answer.py (PartSeek) | rev06_001 | ✅ structured + collision |
-| check_pdfs.py | rev06_001 | ✅ auto OCR in utils/ |
-| yolo_ingest.py | rev07_001 | ✅ Ready — needs llava |
-| yolo_train.py | rev07_001 | ✅ Ready — needs images |
-| YOLO_GUIDE.md | rev07_001 | ✅ Done |
-| FastAPI main.py | rev06_002 | ✅ importlib fix — port 8001 |
-| EDA Notebook | rev07_001 | ✅ Chapter 1-6 (6.1/6.3/6.4 revalidated with measured logic) |
+| ChromaDB | 1.5.5 | ✅ Installed |
+| rank-bm25 | 0.2.2 | ✅ Installed |
+| MLFlow | 3.10.1 | ✅ Running — BM25 + RAG logged |
+| 05_data | — | ✅ 39 docs / 121 chunks / 4 categories |
+| ingest.py (DocSeek) | rev05_003 | ✅ Done — OCR + language detect |
+| search.py (DocSeek) | rev06_001 | ✅ Done — filter + confidence + COLLECTION_NAME=knowseek |
+| answer.py (DocSeek) | rev05_003 | ✅ Done — RAG + OEM comparison |
+| check_pdfs.py | rev05_003 | ✅ Done — auto OCR pipeline |
+| ingest.py (PartSeek) | rev05_003 | ✅ Done — calls DocSeek ingest |
+| search.py (PartSeek) | rev05_003 | ✅ Done — Bolts+Torque filter |
+| answer.py (PartSeek) | rev05_003 | ✅ Done — structured results + collision |
+| FastAPI main.py | rev05_004 | ✅ Running — port 8001 — knowseek health check ✅ |
+| EDA Notebook | rev05_003 | ✅ Chapter 1-6 complete |
 | Midterm PPT | rev05_003 | ✅ Delivered 20.03.2026 |
-| Technical PPT | — | 🔜 #27 26.03 |
-| Stakeholder PPT | — | 🔜 #28 27.03 |
-| RnD_DESCRIPTION.md | rev07_001 | ✅ Hybrid Search documented |
-| README.md | rev06_001 | ✅ Done |
-| SPRINT_PLAN.md | rev07_002 | ✅ This file |
-| requirements.txt | rev06_001 | ✅ Done |
+| Technical PPT | — | 🔜 main_sia07 |
+| Stakeholder PPT | — | 🔜 main_sia07 |
+| RnD_DESCRIPTION.md | rev05_003 | ✅ Done |
+| README.md | rev05_003 | ✅ Done |
+| requirements.txt | rev05_003 | ✅ Done |
+| build_ppt.py | rev05_002 | ✅ Done |
 | docker-compose.yml | — | 🔜 Phase 2 |
 
 ---
@@ -247,4 +283,4 @@ gh issue create \
 ---
 
 *Save in: `04_progress/sprint_logs/SPRINT_PLAN.md`*
-*Version: rev07_002 — Last updated: 27.03.2026 21:10 — Branch: main_sia08*
+*Version: rev05_005 — Last updated: 26.03.2026 — Branch: main_sia07*
