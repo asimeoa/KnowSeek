@@ -16,7 +16,7 @@ interface Module {
 export const modules: Module[] = [
   { id: 'docseek', name: 'DocSeek.Ai', color: '#10B981', iconColor: '#10B981', tooltipColor: '#34D399', description: 'Search all company documents', active: true },
   { id: 'partseek', name: 'PartSeek.Ai', color: '#0EA5E9', iconColor: '#0EA5E9', tooltipColor: '#38BDF8', description: 'Find internal standard parts', active: true },
-  { id: 'normseek', name: 'NormSeek.Ai', color: '#9199F4', iconColor: '#9199F4', tooltipColor: '#9199F4', description: 'Compare against ISO & OEM standards', active: false },
+  { id: 'normseek', name: 'NormSeek.Ai', color: '#9199F4', iconColor: '#9199F4', tooltipColor: '#9199F4', description: 'Comparison against ISO & OEM standards', active: false },
   { id: 'costseek', name: 'CostSeek.Ai', color: '#FC9D57', iconColor: '#FC9D57', tooltipColor: '#FC9D57', description: 'Design-to-cost analysis', active: false },
 ];
 

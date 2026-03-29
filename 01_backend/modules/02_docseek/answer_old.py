@@ -5,8 +5,8 @@ Takes search results from search.py,
 sends them to llama3 via Ollama,
 returns a clean answer with source + confidence.
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev06_001 — 25.03.2026 08:00
+Branch:  main_sia07
 
 Chapters:
     1. Imports
@@ -20,16 +20,7 @@ Chapters:
         4.2 ask_with_filter()
         4.3 compare_oems()
     5. Run
-
-Processing Order (rev06_002):
-    1. Domain Check (search.py) — no keywords → RED, stop
-    2. ChromaDB Semantic Search — find similar chunks
-    3. BM25 Reranking (search.py) — keyword validation
-    4. llama3 — only called if signal is GREEN or YELLOW
-    → llama3 is NEVER called for nonsense queries
-    → faster + saves resources
 """
-
 
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
@@ -37,11 +28,16 @@ Processing Order (rev06_002):
 
 import time
 import requests
+import importlib.util
 from pathlib import Path
-import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
-from search import search, search_with_filter
+# Import search functions using explicit filepath
+docseek_search_path = Path(__file__).resolve().parent / "search.py"
+spec = importlib.util.spec_from_file_location("docseek_search", docseek_search_path)
+search_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(search_module)
+search = search_module.search
+search_with_filter = search_module.search_with_filter
 
 
 # ─────────────────────────────────────────────────────
@@ -62,14 +58,10 @@ TEMPERATURE = 0.1    # low = more focused answers
 def build_context(results: list[dict]) -> str:
     """
     Build context string from search results.
-    Only uses chunks with signal GREEN or YELLOW.
-    RED chunks are excluded — BM25 said they don't match.
+    Only uses top N results above minimum score.
     """
     context_parts = []
     for r in results[:MAX_CONTEXT]:
-        # Skip RED results — BM25 or domain check failed
-        if r.get("signal") == "RED":
-            continue
         if r["score"] < 0.60:
             continue
         part = (
@@ -112,11 +104,8 @@ ANSWER:"""
 def format_answer(question: str, answer: str, results: list[dict], elapsed_ms: float) -> dict:
     """
     Format the final answer dict with all metadata.
-    Uses first non-RED result as top result.
     """
-    # Find first non-RED result
-    top = next((r for r in results if r.get("signal") != "RED"), results[0] if results else {})
-
+    top = results[0] if results else {}
     signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(
         top.get("signal", "RED"), "🔴"
     )
@@ -130,7 +119,6 @@ def format_answer(question: str, answer: str, results: list[dict], elapsed_ms: f
             "signal":   r["signal"],
         }
         for r in results[:MAX_CONTEXT]
-        if r.get("signal") != "RED"
     ]
 
     return {
@@ -155,11 +143,11 @@ def ask(
     verbose: bool = True
 ) -> dict:
     """
-    Full RAG pipeline with Hybrid Search:
-    1. Domain Check — no keywords → RED, no llama3
-    2. ChromaDB Semantic Search
-    3. BM25 Reranking
-    4. llama3 — only for GREEN/YELLOW results
+    Full RAG pipeline — search + answer.
+    1. Search ChromaDB for relevant DocSeek chunks
+    2. Build context from top results
+    3. Send to llama3
+    4. Return answer + source + confidence
 
     Usage:
         result = ask("What are the salt spray test requirements?")
@@ -170,7 +158,6 @@ def ask(
     if verbose:
         print(f"Searching for: {question}")
 
-    # Steps 1-3 happen in search()
     results = search(question, n_results=n_results, verbose=False)
 
     if not results:
@@ -184,24 +171,8 @@ def ask(
             "time_ms":     0
         }
 
-    # Check if all results are RED — domain check or BM25 failed
-    all_red = all(r.get("signal") == "RED" for r in results)
-    if all_red:
-        elapsed_ms = round((time.time() - start) * 1000, 1)
-        return {
-            "question":    question,
-            "answer":      "This query does not match the knowledge base. Please use automotive engineering terminology.",
-            "confidence":  0.0,
-            "signal":      "RED",
-            "signal_icon": "🔴",
-            "sources":     [],
-            "time_ms":     elapsed_ms
-        }
-
-    # Step 4 — Build context (skips RED chunks)
     context = build_context(results)
     if not context:
-        elapsed_ms = round((time.time() - start) * 1000, 1)
         return {
             "question":    question,
             "answer":      "No relevant content found above confidence threshold.",
@@ -209,11 +180,11 @@ def ask(
             "signal":      "RED",
             "signal_icon": "🔴",
             "sources":     [],
-            "time_ms":     elapsed_ms
+            "time_ms":     0
         }
 
-    # Step 5 — Send to llama3
     prompt = build_prompt(question, context)
+
     if verbose:
         print(f"Sending to llama3...")
 
@@ -233,7 +204,7 @@ def ask(
         answer_text = f"Error connecting to Ollama: {e}"
 
     elapsed_ms = round((time.time() - start) * 1000, 1)
-    result     = format_answer(question, answer_text, results, elapsed_ms)
+    result = format_answer(question, answer_text, results, elapsed_ms)
 
     if verbose:
         print()
@@ -263,13 +234,12 @@ def ask_with_filter(
 ) -> dict:
     """
     Ask with metadata filter — e.g. only Painting docs.
-    Full hybrid search pipeline applied.
 
     Usage:
         result = ask_with_filter("coating thickness", category="Painting")
         result = ask_with_filter("requirements", oem_code="OEM-G")
     """
-    start   = time.time()
+    start = time.time()
     results = search_with_filter(
         question,
         oem_code=oem_code,
@@ -280,25 +250,12 @@ def ask_with_filter(
     if not results:
         return {
             "question":    question,
-            "answer":      "No results found — query may not match domain or filter.",
+            "answer":      "No results found.",
             "confidence":  0.0,
             "signal":      "RED",
             "signal_icon": "🔴",
             "sources":     [],
             "time_ms":     0
-        }
-
-    all_red = all(r.get("signal") == "RED" for r in results)
-    if all_red:
-        elapsed_ms = round((time.time() - start) * 1000, 1)
-        return {
-            "question":    question,
-            "answer":      "No relevant content found for this query and filter combination.",
-            "confidence":  0.0,
-            "signal":      "RED",
-            "signal_icon": "🔴",
-            "sources":     [],
-            "time_ms":     elapsed_ms
         }
 
     context    = build_context(results)
@@ -320,7 +277,7 @@ def ask_with_filter(
         answer_text = f"Error: {e}"
 
     elapsed_ms = round((time.time() - start) * 1000, 1)
-    result     = format_answer(question, answer_text, results, elapsed_ms)
+    result = format_answer(question, answer_text, results, elapsed_ms)
 
     if verbose:
         print(f"{result['signal_icon']} {result['answer']}")
@@ -339,7 +296,7 @@ def compare_oems(
 ) -> dict:
     """
     Compare a topic across multiple OEM documents.
-    Each OEM goes through full hybrid search pipeline.
+    Returns a comparison dict with results per OEM.
 
     Usage:
         result = compare_oems("salt spray test requirements")
@@ -382,15 +339,15 @@ def compare_oems(
 if __name__ == "__main__":
 
     print("=" * 50)
-    print("TEST 1 — Nonsense Query (should be RED, no llama3)")
+    print("TEST 1 — Basic Question")
     print("=" * 50)
-    result = ask("bitcoin cryptocurrency stock market price")
+    result = ask("What are the corrosion performance requirements?")
 
     print()
     print("=" * 50)
-    print("TEST 2 — Valid Query")
+    print("TEST 2 — German Question")
     print("=" * 50)
-    result = ask("What are the corrosion performance requirements?")
+    result = ask("Welche Anforderungen gibt es für Korrosionsschutz?")
 
     print()
     print("=" * 50)

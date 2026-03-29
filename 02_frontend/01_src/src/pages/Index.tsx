@@ -20,7 +20,16 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query);
+    const normalized = query.trim();
+
+    if (!normalized) {
+      setSearchQuery('');
+      setHasResults(false);
+      setIsProcessing(false);
+      return;
+    }
+
+    setSearchQuery(normalized);
     setIsProcessing(true);
     // Simulate AI processing
     setTimeout(() => {
@@ -65,7 +74,7 @@ const Index = () => {
                 {/* Under construction messages */}
                 {activeModule === 'normseek' && (
                    <p className="text-center text-sm mt-6" style={{ color: '#C7D2FE', opacity: 0.7 }}>
-                     NormSeek.Ai — Compare requirements against ISO and OEM standards. Available in Phase 2.
+                     NormSeek.Ai — Comparison of requirements against ISO and OEM standards. Available in Phase 2.
                    </p>
                  )}
                  {activeModule === 'costseek' && (

@@ -3,8 +3,8 @@ main.py — KnowSeek.Ai — FastAPI Backend
 ─────────────────────────────────────────
 REST API connecting Frontend to all KnowSeek modules.
 
-Version: rev06_001 — 25.03.2026 13:24
-Branch:  main_sia07
+Version: rev07_002 — 27.03.2026 21:10
+Branch:  main_sia08
 
 Modules:
     01 PartSeek.Ai  — Part search         ✅ Active
@@ -102,7 +102,7 @@ print("⏳ CostSeek not yet active — Phase 3")
 app = FastAPI(
     title="KnowSeek.Ai API",
     description="Local AI Knowledge Platform — On-Premise RAG System",
-    version="rev06_001"
+    version="rev07_002"
 )
 
 app.add_middleware(
@@ -125,6 +125,7 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1)
     oem_code: Optional[str] = None
     category: Optional[str] = None
+    module: Optional[str] = None
     n_results: int = Field(5, ge=1, le=20)
 
 class CompareRequest(BaseModel):
@@ -182,7 +183,7 @@ def check_chromadb() -> dict:
 def root():
     return {
         "name":    "KnowSeek.Ai API",
-        "version": "rev06_001",
+        "version": "rev07_002",
         "modules": {
             "docseek":  "✅ active",
             "partseek": "✅ active",
@@ -262,10 +263,12 @@ def partseek_query(request: QueryRequest):
     if not PARTSEEK_READY:
         raise HTTPException(status_code=503, detail="PartSeek not available")
     try:
-        if request.oem_code:
+        if request.oem_code or request.category or request.module:
             result = find_part_with_filter(
                 query=request.question,
                 oem_code=request.oem_code,
+                category=request.category,
+                module=request.module,
                 verbose=False
             )
         else:
