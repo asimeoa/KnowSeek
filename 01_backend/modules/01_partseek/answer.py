@@ -6,8 +6,8 @@ answer.py — KnowSeek.Ai — PartSeek Module
 Returns structured part results.
 No LLM needed — direct metadata display.
 
-Version: rev06_001 — 25.03.2026 08:23
-Branch:  main_sia07
+Version: rev07_002 — 27.03.2026 21:10
+Branch:  main_sia08
 
 Chapters:
     1. Imports
@@ -154,6 +154,8 @@ def find_part_with_filter(
     query: str,
     oem_code: str = None,
     thread_size: str = None,
+    category: str = None,
+    module: str = None,
     verbose: bool = True
 ) -> dict:
     """
@@ -168,6 +170,8 @@ def find_part_with_filter(
         query,
         oem_code=oem_code,
         thread_size=thread_size,
+        category=category,
+        module=module,
         verbose=False
     )
     elapsed = round((time.time() - start) * 1000, 1)
@@ -177,7 +181,10 @@ def find_part_with_filter(
 
     if verbose:
         print(f"Query:    {query}")
-        print(f"Filter:   oem={oem_code or 'all'} thread={thread_size or 'all'}")
+        print(
+            f"Filter:   module={module or 'partseek'} "
+            f"oem={oem_code or 'all'} category={category or 'all'} thread={thread_size or 'all'}"
+        )
         print(f"Found:    {len(results)} parts")
         print(f"Time:     {elapsed}ms")
         print()

@@ -8,7 +8,7 @@
 
 | Date | Deliverable |
 |------|-------------|
-| 20.03.2026 | **Midterm** — PPT: business case, EDA, model comparison ✅ |
+| 20.03.2026 | **Midterm** ✅ — PPT delivered |
 | 27.03.2026 | **Dry Run** — Live demo + 10 min presentation |
 | 02.04.2026 | **Stakeholder** — Final presentation |
 
@@ -31,132 +31,92 @@
 
 | PPT | When | Audience | Purpose |
 |-----|------|----------|---------|
-| Midterm PPT | 20.03 | Coach / Bootcamp | Business case + EDA + model comparison |
-| Technical PPT | Week 3 | Technical audience | RAG pipeline + architecture + MLFlow results |
+| Midterm PPT | 20.03 ✅ | Coach / Bootcamp | Business case + EDA + model comparison |
+| Technical PPT | 26.03 | Technical audience | RAG + Hybrid Search + architecture |
 | Stakeholder PPT | 27.03 | Business audience | Problem + solution + demo + value |
 
 ---
 
-## Week 1 — Repo + Frontend + PM + Environment (10–16.03)
-
-> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+## Week 1 — Repo + Frontend + PM + Environment ✅
 
 ### Completed ✅
 
-- [x] Frontend UI Design finalized (rev02_work) — Lovable exported + tested
+- [x] Frontend UI Design finalized — Lovable exported + tested
 - [x] GitHub repo structure clean — Folder 01–06 in place
-- [x] README rev05_003 — macOS + Windows + Linux setup
-- [x] Sprint Plan created — this file
-- [x] DEV_NOTES created — local setup instructions
-- [x] GitHub Projects Board — 39 issues, 3 milestones
-- [x] GitHub Issues #24, #25, #26 — Security, Data, OEM Icons
-- [x] GitHub Issue — OEM Anonymization (brand names → OEM-V / OEM-W / OEM-G)
-- [x] Frontend glow fixes — NormSeek #9199F4, CostSeek #FC9D57
-- [x] Pulse animations in index.css — outer glow in pulse
-- [x] AppSidebar.tsx colors — all 4 module colors correct
-- [x] SearchBlock.tsx colors — glow colors corrected
-- [x] Index.tsx overflow + padding — container fixed
-- [x] Ollama installed — v0.17.7, llama3 downloaded (4.7GB)
-- [x] Embedding model decided — nomic-embed-text via Ollama (DE + EN)
-- [x] Chunking strategy decided — 4 document types, chunk sizes defined
-- [x] Code structure decided — .py files for logic, notebooks for EDA only
-- [x] OKRs defined — Objective + KRs for platform, DocSeek, PartSeek
-- [x] RnD_DESCRIPTION.md rev05_003 — EVA + OKRs + Metadata Schema
-- [x] OKR Diagram — okr_diagram.svg in 03_docs/pictures/
-- [x] Folder cleanup — strategy.md + PROGRESS.md deleted
-- [x] Branch main_sia_03 → main_sia_04 → main_sia05
-- [x] #3 Solo project approval confirmed
-- [x] #4 Ask coach: Solo project approval ✅ — approved
-- [x] #5 Lovable Fix B — NormSeek + CostSeek sidebar icons
-- [x] #6 Lovable Fix 2d — Sidebar icons equal brightness
-- [x] #7 Lovable Fix 3 — Search field inner light ray effect
-- [x] #8 Ollama install and test locally — llama3
-- [x] #9 ChromaDB install and test locally
-- [x] #10 Python virtual environment + requirements.txt rev05_003 ✅
-- [x] Setup ChromaDB — chromadb 1.5.5 installed ✅
-- [x] #39 Anonymized OEM test data loaded — 01_Fasteners / 02_Specifikation / 03_Painting ✅
-- [x] Pull nomic-embed-text — nomic-embed-text 274MB installed ✅
-- [x] #11 EDA Notebook — Chapter 1-6 complete ✅
-- [x] #12 MLFlow local setup — running on http://127.0.0.1:5000 ✅
-- [x] #13 BM25 Baseline — avg_score: 4.712 — logged in MLFlow ✅
-- [x] #14 RAG llama3 — avg_score: 0.861 — logged in MLFlow ✅
-- [x] #15 FastAPI — GET /api/health + POST /api/docseek/query ✅
-- [x] #18 DocSeek end-to-end — ingest.py + search.py + answer.py ✅
+- [x] README rev06_001 — macOS + Windows + Linux setup
+- [x] Sprint Plan + DEV_NOTES created
+- [x] GitHub Projects Board — 44 issues, 3 milestones
+- [x] OEM Anonymization schema defined
+- [x] Frontend glow + pulse animations
+- [x] Ollama v0.17.7 + llama3 + nomic-embed-text
+- [x] ChromaDB 1.5.5 + rank-bm25 0.2.2
+- [x] Python venv + requirements.txt ✅
+- [x] MLFlow running on port 5000 ✅
 - [x] #30 🎯 Confidence score 🟢🟡🔴 on every result ✅
 - [x] #31 🎯 Multi language DE + EN working ✅
 - [x] #32 🎯 Zero data leaves local machine — verified ✅
-- [x] OCR pipeline — pytesseract + Pillow + fpdf2 ✅
-- [x] check_pdfs.py — auto OCR check + conversion ✅
-- [x] PNG → searchable PDF conversion — 01_Fasteners ✅
-- [x] DE/EN language detection — get_language() in ingest.py ✅
-- [x] Bolts+Torque category — CATEGORY_MAP updated ✅
-- [x] EDA Chapter 3 complete — Data Overview + PDF Analysis + Chunk Size + Language ✅
+- [x] OCR pipeline — pytesseract + fpdf2 ✅
+- [x] check_pdfs.py rev06_001 — auto OCR in utils/ ✅
+- [x] EDA Chapter 1-3 complete ✅
 
 ---
 
-## Week 2 — Integration + Midterm (17–20.03)
-
-> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+## Week 2 — Midterm (17–20.03) ✅
 
 | Day | Issue | Task | Status |
 |-----|-------|------|--------|
 | 17.03 | #11 | EDA Chapter 6 — BM25 vs RAG comparison | ✅ |
 | 17.03 | #29 🎯 | Answer time measured + visualized | ✅ |
 | 18–19.03 | #19 | Midterm PPT — build | ✅ |
-| 19.03 | #20 | PPT finalized + rehearsed | ✅ |
-| 19.03 | #20 | PPT pushed to GitHub | ✅ |
-| 20.03 🎯 | — | **Midterm Presentation** | ✅ Delivered |
-
-### Midterm PPT — Slide Structure
-
-| Slide | Content |
-|-------|---------|
-| 1 | Title + Name + Date |
-| 2 | Business Problem + Impact |
-| 3 | Target User + Use Case |
-| 4 | Solution Overview (KnowSeek.ai) |
-| 5 | EDA — Data Overview |
-| 6 | EDA — Key Findings |
-| 7 | Model Comparison (Baseline vs llama3) |
-| 8 | MLFlow Results Screenshot |
-| 9 | Architecture — Data Flow Diagram |
-| 10 | Next Steps (Week 3 + 4) |
+| 20.03 | — | **Midterm Presentation** | ✅ Delivered |
 
 ---
 
-## Week 3 — DocSeek + PartSeek + FastAPI (21–26.03)
+## Week 3 — DocSeek + PartSeek + FastAPI + Hybrid Search (21–26.03)
 
-> 🎯 marked tasks are OKR Key Results — tracked in GitHub Kanban Board with label `okr`
+### Completed in main_sia05 → main_sia08 ✅
 
-### Completed in main_sia05 ✅
+| Branch | Issue | Task | Rev | Status |
+|--------|-------|------|-----|--------|
+| main_sia05 | — | Load more documents | — | ✅ 39 docs / 121 chunks |
+| main_sia05 | #15 | FastAPI — health + docseek + partseek | rev05_003 | ✅ |
+| main_sia05 | #18 | DocSeek end-to-end | rev05_003 | ✅ |
+| main_sia06 | — | ChromaDB restructured "docseek" → "knowseek" | rev06_001 | ✅ |
+| main_sia07 | — | ingest.py — CATEGORY_MAP + get_module() | rev06_001 | ✅ |
+| main_sia07 | — | search.py DocSeek — module filter | rev06_001 | ✅ |
+| main_sia07 | — | answer.py DocSeek — RAG + OEM comparison | rev06_001 | ✅ |
+| main_sia07 | — | search.py PartSeek — module="partseek" filter | rev06_001 | ✅ |
+| main_sia07 | — | answer.py PartSeek — structured + collision | rev06_001 | ✅ |
+| main_sia07 | — | ingest.py PartSeek — wrapper → DocSeek | rev06_001 | ✅ |
+| main_sia07 | — | main.py — importlib fix + health check | rev06_002 | ✅ |
+| main_sia07 | — | EDA Notebook Chapter 1-6 | rev06_002 | ✅ |
+| main_sia07 | — | PartSeekView.tsx — real API connected | rev06_001 | ✅ |
+| main_sia07 | #40 | Hybrid Search BM25 + Domain Filter | rev06_002 | ✅ |
+| main_sia07 | — | search.py DocSeek — Domain + BM25 Reranking | rev06_002 | ✅ |
+| main_sia07 | — | answer.py DocSeek — llama3 only GREEN/YELLOW | rev06_002 | ✅ |
+| main_sia07 | — | yolo_ingest.py — LLaVA + YOLO image ingest | rev07_001 | ✅ |
+| main_sia07 | — | yolo_train.py — YOLO training pipeline | rev07_001 | ✅ |
+| main_sia07 | — | YOLO_GUIDE.md — training guide | rev07_001 | ✅ |
+| main_sia07 | — | RnD_DESCRIPTION.md — Hybrid Search documented | rev07_001 | ✅ |
 
-| Day | Issue | Task | Status |
-|-----|-------|------|--------|
-| 21.03 | — | Apply Midterm feedback | ✅ |
-| 21.03 | — | Before/After time comparison planned | ✅ |
-| 21.03 | — | ROI calculation planned | ✅ |
-| 22.03 | — | Load more documents — 39 docs / 121 chunks | ✅ |
-| 22.03 | — | check_pdfs.py — auto OCR pipeline | ✅ |
-| 22.03 | #15 | FastAPI — GET /api/health + POST /api/docseek/query | ✅ |
-| 22.03 | — | PartSeek search.py + answer.py + ingest.py | ✅ |
-| 22.03 | — | EDA rebuild — all chapters independent | ✅ |
-| 22.03 | — | 01_backend/utils/ — shared tools folder | ✅ |
-
-### Open — moves to main_sia06 🔜
+### Open — main_sia08 🔜
 
 | Day | Issue | Task | Deliverable |
 |-----|-------|------|-------------|
-| 23.03 | #16 | Frontend connected to backend | Error handling + loading states |
-| 23.03 | #33 🎯 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
-| 23.03 | #34 🎯 | Risk table correct | same / different / conflict verified |
-| 23.03 | #35 🎯 | Source link clickable on every result | Manual test |
-| 24.03 | #36 🎯 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
-| 24.03 | #37 🎯 | Team collision warning works | Tested with 2 similar part queries |
-| 24.03 | #38 🎯 | All metadata shown on part result | Material, strength, OEM logo verified |
-| 24.03 | #27 | **Technical PPT — build** | See slide structure below |
-| 25.03 | — | Before/After time comparison | Human: 2h vs KnowSeek: 3s |
-| 25.03 | — | ROI calculation | 1 day saved per employee per year |
-| 25.03 | — | All code clean + commented | Pytest passing |
+| 27.03 | #41 | EDA Chapter 6.3 — real confidence classes (Green/Yellow/Red) | ✅ Measured, no synthetic scores |
+| 27.03 | — | EDA Chapter 6.1 — hardcoded values removed | ✅ Runtime benchmark now fully measured |
+| 27.03 | — | EDA Chapter 6.4 — denominator fix + color update | ✅ Scores no longer identical, Detailed=orange |
+| 26.03 | #42 | DocSeekView.tsx — connected to real API | Answer + signal + sources shown |
+| 26.03 | #33 🎯 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
+| 26.03 | #34 🎯 | Risk table correct | same / different / conflict verified |
+| 26.03 | #35 🎯 | Source link clickable on every result | Manual test |
+| 26.03 | #36 🎯 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
+| 26.03 | #37 🎯 | Team collision warning works | Tested with 2 similar part queries |
+| 26.03 | #38 🎯 | All metadata shown on part result | Material, strength, OEM verified |
+| 26.03 | #43 | YOLO/LLaVA — ollama pull llava + test | 10 images ingested |
+| 26.03 | #27 | **Technical PPT — build** | See slide structure below |
+| 26.03 | — | Before/After Zeitvergleich | Human: 2h vs KnowSeek: 3s |
+| 26.03 | — | ROI Rechnung | 1 day saved per employee per year |
 | 26.03 | #22 | Full dress rehearsal | 10 min timed |
 | 26.03 | — | GitHub repo final check | All files in place |
 
@@ -206,14 +166,14 @@
 |-------|---------|
 | 1 | Title — KnowSeek.ai Technical Overview |
 | 2 | RAG Pipeline — Step by step |
-| 3 | Embedding Model Evaluation — Why nomic-embed-text |
-| 4 | Chunking Strategy — Document types + parameters |
-| 5 | ChromaDB + Vector Search — How it works |
-| 6 | MLFlow — Experiment results + spider diagram |
-| 7 | System Architecture — Ports + Data Flow |
-| 8 | Code Structure — .py files + Notebooks |
+| 3 | Hybrid Search — BM25 + Semantic — Why + How |
+| 4 | Embedding Model Evaluation — Why nomic-embed-text |
+| 5 | Chunking Strategy — Document types + parameters |
+| 6 | ChromaDB Architecture — One collection + module filtering |
+| 7 | MLFlow — Experiment results |
+| 8 | System Architecture — Ports + Data Flow |
 | 9 | Known Limitations + Mitigations |
-| 10 | Phase 2 + Phase 3 Roadmap |
+| 10 | Phase 2 Roadmap — YOLO + NormSeek |
 
 ---
 
@@ -239,7 +199,7 @@
 | 6 | Live Demo — PartSeek (part search) |
 | 7 | Trust Signal — Confidence 🟢🟡🔴 explained |
 | 8 | Data Privacy — 100% local, no cloud |
-| 9 | OKR Results + ROI — 1 saved day per employee per year |
+| 9 | OKR Results + ROI |
 | 10 | Roadmap — Phase 2 + Phase 3 |
 
 ---
@@ -251,7 +211,8 @@
 | Frontend UI | rev02_001 | ✅ Done |
 | AppSidebar.tsx | rev02_001 | ✅ Colors correct |
 | SearchBlock.tsx | rev02_001 | ✅ Glow correct |
-| index.css | rev02_001 | ✅ Pulse animations correct |
+| PartSeekView.tsx | rev06_001 | ✅ Real API connected |
+| DocSeekView.tsx | — | 🔜 #42 main_sia08 |
 | Ollama + llama3 | 0.17.7 | ✅ Running |
 | nomic-embed-text | 274MB | ✅ Installed |
 | ChromaDB | 1.5.5 | ✅ Installed |
@@ -287,16 +248,16 @@ Backlog → In Progress → Review → Done
 Tags: `frontend` `backend` `data` `ppt` `docs` `fix` `security` `okr`
 
 Milestones:
-- Week 1: Environment + Setup
-- Week 2: Midterm Presentation
-- Week 3 + 4: Final Demo
+- Week 1: Environment + Setup ✅
+- Week 2: Midterm Presentation ✅
+- Week 3: Final Presentation Due: 27.03.2026
 
 ---
 
 ## GitHub CLI — Useful Commands
 
 ```bash
-# Show all issues with status + labels
+# Show all issues
 gh issue list --limit 50 --state all --json number,title,state,labels | python3 -c "
 import json,sys
 issues = json.load(sys.stdin)
@@ -304,9 +265,6 @@ for i in issues:
     labels = [l['name'] for l in i['labels']]
     print(f\"#{i['number']:3} {i['state']:6} {', '.join(labels):15} {i['title'][:50]}\")
 "
-
-# Show all milestones
-gh api repos/asimeoa/KnowSeek/milestones | grep '"title"'
 
 # Close an issue
 gh issue close <number>
@@ -318,14 +276,8 @@ gh label create "labelname" --color "#HEX" --description "description"
 gh issue create \
   --title "Title" \
   --body "Description" \
-  --label "okr" \
-  --milestone "Week 3 : Dry Run Due: 27.03.2026"
-
-# Add label to existing issue
-gh issue edit <number> --add-label "labelname"
-
-# Remove label from existing issue
-gh issue edit <number> --remove-label "labelname"
+  --label "backend" \
+  --milestone "Week3: Final Presentation Due: 27.03.2026"
 ```
 
 ---

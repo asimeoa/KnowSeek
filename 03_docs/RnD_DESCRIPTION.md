@@ -1,7 +1,7 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev06_001 — Last updated: 25.03.2026 09:14 — Branch: main_sia07*
+*Version: rev07_002 — Last updated: 27.03.2026 21:10 — Branch: main_sia08*
 
 > All data stays local. No cloud. No internet required.
 
@@ -96,33 +96,57 @@ KnowSeek.ai solves this directly.
 
 ---
 
-## 5. How It Works — RAG Pipeline
+## 5. How It Works — RAG Pipeline with Hybrid Search
 
-KnowSeek.ai uses a method called **RAG — Retrieval Augmented Generation**.
+KnowSeek.ai uses **RAG — Retrieval Augmented Generation** with a **Hybrid Search** pre-filter.
 
 ```
 STEP 1 — Ingest (done once):
 Documents → split into chunks → convert to vectors → store in ChromaDB
 
-STEP 2 — Answer (every query):
-Question → convert to vector → find matching chunks → llama3 → answer + source
+STEP 2 — Answer (every query) — Hybrid Search Pipeline:
+
+  Query
+    ↓
+  Domain Check (BM25 keywords)
+  No automotive keywords? → 🔴 RED — STOP — no ChromaDB, no llama3
+    ↓
+  ChromaDB Semantic Search
+  Find top N similar chunks by vector distance
+    ↓
+  BM25 Reranking
+  Score each chunk by keyword match
+  BM25 = 0 → override to 🔴 RED
+    ↓
+  llama3 (only for GREEN/YELLOW chunks)
+  Generate answer from verified context
+    ↓
+  Answer + confidence 🟢🟡🔴 + source
 ```
 
-This means the AI does not guess — it reads your actual documents and tells you exactly where the answer comes from.
+**Why Hybrid Search?**
 
-**Confidence is always shown as a traffic light:**
+Semantic search alone answers: *"Which chunk is most similar?"* (relative)
+BM25 keyword search answers: *"Does this query match our knowledge?"* (absolute)
+
+Combined, they prevent nonsense queries from getting high confidence signals:
+- "bitcoin cryptocurrency" → BM25 = 0 → 🔴 RED immediately
+- "salt spray test" → BM25 > 0 → semantic search + llama3 ✅
+
+**Confidence traffic light:**
 
 | Score | Color | Meaning |
 |-------|-------|---------|
 | > 85% | 🟢 Green | Reliable answer — source found |
 | 60–85% | 🟡 Yellow | Partial match — check the source |
 | < 60% | 🔴 Red | Low confidence — verify manually |
+| BM25 = 0 | 🔴 Red | Query outside knowledge domain |
 
 **FastAPI connects the AI backend to the React frontend:**
 
 ```
-React Frontend  →  FastAPI  →  ChromaDB → llama3
-(JavaScript)       (Python)    (vectors)  (answers)
+React Frontend  →  FastAPI  →  Hybrid Search → ChromaDB → llama3
+(JavaScript)       (Python)    (BM25 + Semantic)  (vectors)  (answers)
 
 POST /api/docseek/query   ← document question
 POST /api/partseek/query  ← part search
@@ -139,6 +163,7 @@ GET  /api/health          ← server status check
 |-----------|-----------|-----|
 | LLM | llama3:8b via Ollama | 100% offline, runs well on Mac M1 |
 | Embedding model | nomic-embed-text via Ollama | Full DE + EN support, no extra package |
+| Hybrid Search | ChromaDB + rank-bm25 | Semantic + keyword — accurate + fast |
 | Baseline model | rank-bm25 | Keyword search — baseline for MLFlow comparison |
 | Vector database | ChromaDB | Simple, local, persistent, no server needed |
 | RAG framework | LangChain | PDF/DOCX/XLSX loaders + memory + multi-query |
@@ -158,8 +183,6 @@ GET  /api/health          ← server status check
 
 ### Embedding Model — Why We Chose nomic-embed-text
 
-We evaluated 5 models before deciding:
-
 | Model | Size | DE Support | Decision |
 |-------|------|-----------|----------|
 | all-MiniLM-L6-v2 | 80MB | ❌ | Rejected — English only |
@@ -167,11 +190,6 @@ We evaluated 5 models before deciding:
 | paraphrase-multilingual-mpnet-base-v2 | 280MB | ✅ | Rejected — too large |
 | all-mpnet-base-v2 | 420MB | ❌ | Rejected — English only |
 | **nomic-embed-text (Ollama)** | 270MB | ✅ | ✅ **Selected** |
-
-**Why nomic-embed-text won:**
-- Full DE + EN support — works when question is German but document is English
-- Runs via Ollama — already installed, no extra package
-- One command: `ollama pull nomic-embed-text`
 
 ### Image Recognition Model — Evaluated
 
@@ -205,40 +223,35 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 
 ```
 01_backend/
-├── main.py             ✅ rev06_001 — FastAPI all 4 modules (port 8001)
+├── main.py             ✅ rev07_002 — FastAPI all 4 modules (port 8001)
 ├── modules/
 │   ├── 01_partseek/
 │   │   ├── ingest.py   ✅ rev06_001 — calls DocSeek ingest pipeline
-│   │   ├── search.py   ✅ rev06_001 — filter by module="partseek"
-│   │   └── answer.py   ✅ rev06_001 — structured results + collision warning
+│   │   ├── search.py   ✅ rev07_002 — filter by module="partseek"
+│   │   └── answer.py   ✅ rev07_002 — structured results + collision warning
 │   ├── 02_docseek/
 │   │   ├── ingest.py   ✅ rev06_001 — load, OCR, chunk, module tag, store
-│   │   ├── search.py   ✅ rev06_001 — filter by module="docseek"
-│   │   └── answer.py   ✅ rev06_001 — RAG + llama3 + OEM comparison
+│   │   ├── search.py   ✅ rev07_002 — Hybrid Search: Domain + ChromaDB + BM25
+│   │   └── answer.py   ✅ rev07_002 — RAG + Hybrid Search + OEM comparison
 │   ├── 03_normseek/    ⏳ Phase 2
 │   └── 04_costseek/    ⏳ Phase 3
 └── utils/
-    └── check_pdfs.py   ✅ rev06_001 — auto OCR check for all modules
+    ├── check_pdfs.py   ✅ rev06_001 — auto OCR check for all modules
+    ├── yolo_ingest.py  ✅ rev07_001 — LLaVA + YOLO image ingestion
+    └── yolo_train.py   ✅ rev07_001 — YOLO training pipeline
 
 06_notebooks/
-└── EDA.ipynb           ✅ rev06_001 — Chapter 1-6 complete
+└── EDA.ipynb           ✅ rev07_002 — Chapter 1-6 + Hybrid Search viz
 ```
 
-**Key functions in DocSeek ingest.py:**
+**Key functions:**
 - `get_language(text)` — detects DE vs EN automatically
 - `get_category(filename)` — maps filename to category
 - `get_module(category)` — assigns module based on category
 - `get_oem_code(filename)` — maps filename to OEM code
+- `check_domain_relevance(query)` — domain keyword check
+- `rerank_with_bm25(query, results)` — BM25 keyword reranking
 - `run_ingest()` — full pipeline: load → chunk → vectorize → store
-
-**Category → Module mapping:**
-```python
-# PartSeek categories:
-OEM-Fastener, Supplier-Fastener, Bracket → module="partseek"
-
-# DocSeek categories (everything else):
-Corrosion, Painting, General → module="docseek"
-```
 
 > The notebook is the **window** — the .py files are the **engine**.
 
@@ -277,14 +290,10 @@ Corrosion, Painting, General → module="docseek"
 | Excel (.xlsx) | LangChain + openpyxl | 🟢 | Requirements lists, test tables |
 | Images with tables | pdfplumber | 🟡 | Digital PDFs only — not scanned |
 | CAD drawings (DXF/DWG) | PyMuPDF | 🟡 | Text fields only — no geometry |
-| Part images (YOLO)* | YOLO / LLaVA | 🟡 | Phase 2 — start with 10 images |
+| Part images (YOLO/LLaVA)* | YOLO / LLaVA | 🟡 | Phase 2 — start with 10 images |
 | Email (.msg/.pst) | extract-msg* | 🔴 | Phase 2 — use PDF export for MVP |
 | CAD metadata (NX) | NX Open API** | 🔴 | Phase 3 |
 | JT 3D files | jt-js + three.js* | 🔴 | Phase 2 |
-
-> ⚠️ **Known limitation:** Geometry from technical drawings cannot be extracted with text tools.
-> LLaVA (Phase 2) can describe shapes but cannot measure exact geometry.
-> The system will always show a warning when a file type is not fully supported.
 
 > **Info: Anonymization Schema for Test Data**
 >
@@ -331,6 +340,8 @@ Corrosion, Painting, General → module="docseek"
 | Image → searchable PDF | fpdf2 | 🟢 | OCR text saved as PDF ✅ |
 | Language detection | get_language() | 🟢 | DE vs EN — heuristic keyword check ✅ |
 | Module assignment | get_module() | 🟢 | category → module tag ✅ |
+| Domain relevance check | check_domain_relevance() | 🟢 | BM25 keyword filter — pre-LLM ✅ |
+| BM25 reranking | rerank_with_bm25() | 🟢 | Keyword validation post-ChromaDB ✅ |
 | DOCX parsing | LangChain DocLoader | 🟢 | Clean extraction |
 | XLSX parsing | LangChain + openpyxl | 🟢 | Tables and structured data |
 | Image recognition | YOLO / LLaVA* | 🟡 | Phase 2 — incremental training |
@@ -344,8 +355,6 @@ Corrosion, Painting, General → module="docseek"
 | Small Lastenheft (~50p) | ~6MB | 500 | 100 | 🟢 |
 | Large Lastenheft (~300p) | ~10MB | 1000 | 200 | 🟡 |
 
-> Smart pre-processor detects document type and applies the right chunking automatically.
-
 #### V3. Vector Database
 
 | Tool | R/Y/G | Decision | Notes |
@@ -353,21 +362,30 @@ Corrosion, Painting, General → module="docseek"
 | **ChromaDB** | 🟢 | ✅ Selected | Local, simple, persistent |
 | FAISS | 🟡 | ❌ Rejected | Faster but limited metadata support |
 
-#### V4. RAG Framework
+#### V4. Search Strategy — Hybrid Search (rev06_002)
+
+| Step | Tool | R/Y/G | Notes |
+|------|------|--------|-------|
+| Domain Check | DOMAIN_KEYWORDS + BM25 | 🟢 | Pre-filter — no keywords → RED immediately |
+| Semantic Search | ChromaDB + nomic-embed-text | 🟢 | Vector similarity search |
+| BM25 Reranking | rank-bm25 | 🟢 | Keyword validation — BM25=0 → RED |
+| LLM Answer | llama3 | 🟢 | Only called for GREEN/YELLOW results |
+
+#### V5. RAG Framework
 
 | Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
 | **LangChain** | 🟢 | ✅ Selected | Loaders + Memory + Multi-Query |
 
-#### V5. LLM + Baseline
+#### V6. LLM + Baseline
 
 | Model | Size | R/Y/G | Decision |
 |-------|------|--------|----------|
 | **llama3:8b (Ollama)** | 4.7GB | 🟢 | ✅ Selected — main model |
-| **rank-bm25** | — | 🟢 | ✅ Baseline — keyword search for MLFlow comparison |
-| LLaVA (Ollama)* | 4.5GB | 🟡 | Phase 2 — vision model, no training needed |
+| **rank-bm25** | — | 🟢 | ✅ Dual role: Baseline + Hybrid Search filter |
+| LLaVA (Ollama)* | 4.5GB | 🟡 | Phase 2 — vision model |
 
-#### V6. Experiment Tracking
+#### V7. Experiment Tracking
 
 | Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
@@ -377,7 +395,7 @@ Corrosion, Painting, General → module="docseek"
 - BM25 Baseline — avg_score: 4.712, avg_time: 0.19ms ✅
 - RAG llama3 — avg_score: 0.861, avg_time: 17932ms ✅
 
-#### V7. Memory & Conversation
+#### V8. Memory & Conversation
 
 | Feature | Tool | R/Y/G | Notes |
 |---------|------|--------|-------|
@@ -385,7 +403,7 @@ Corrosion, Painting, General → module="docseek"
 | Multi-doc comparison | Multi-Query Retrieval | 🟢 | e.g. OEM-V vs OEM-W vs OEM-G |
 | Long-term memory | — | 🔴 | Not in MVP |
 
-#### V8. Infrastructure
+#### V9. Infrastructure
 
 | Service | Port | R/Y/G | Notes |
 |---------|------|--------|-------|
@@ -396,7 +414,7 @@ Corrosion, Painting, General → module="docseek"
 | MLFlow UI | 5000 | 🟢 | ✅ Running |
 | Docker Compose | — | 🔴 | Planned — Phase 2 |
 
-#### V9. Frontend & DevOps
+#### V10. Frontend & DevOps
 
 | Tool | R/Y/G | Decision | Notes |
 |------|--------|----------|-------|
@@ -408,7 +426,6 @@ Corrosion, Painting, General → module="docseek"
 | FastAPI | 🟢 | ✅ Active | REST API — port 8001 ✅ |
 | Git + GitHub + gh CLI | 🟢 | ✅ Selected | Version control + automation |
 | Pytest | 🟢 | ✅ Selected | Backend testing |
-| three.js + jt-js* | 🔴 | Phase 2 | 3D viewer |
 
 ---
 
@@ -419,9 +436,9 @@ Corrosion, Painting, General → module="docseek"
 | Feature | R/Y/G | Notes |
 |---------|--------|-------|
 | Answer + source link + highlight | 🟢 | Core feature — working ✅ |
-| Confidence score 🟢🟡🔴 | 🟢 | ChromaDB similarity score — working ✅ |
+| Confidence score 🟢🟡🔴 | 🟢 | Hybrid Search signal — working ✅ |
 | Risk table (same / different / conflict) | 🟢 | Prompt engineering |
-| Warning for unsupported file types | 🟢 | Always shown |
+| Out-of-domain query detection | 🟢 | BM25 = 0 → RED immediately ✅ |
 | Document not found warning | 🟢 | When no match exists |
 
 #### A2. DocSeek Output
@@ -449,7 +466,7 @@ Corrosion, Painting, General → module="docseek"
 | Norm detection | 🟢 | DIN, MBN, ISO from text ✅ |
 | OEM filter | 🟢 | Filter by oem_code ✅ |
 | Team collision warning | 🟡 | MVP: basic — full Phase 2 |
-| Part image search (YOLO) | 🟡 | Phase 2 — incremental |
+| Part image search (YOLO/LLaVA) | 🟡 | Phase 2 — incremental |
 | Project usage | 🔴 | Phase 2 |
 | Recommended torque values | 🔴 | Phase 2 — linked to NormSeek |
 
@@ -466,11 +483,9 @@ Corrosion, Painting, General → module="docseek"
 | PNG / WEBP | pytesseract + fpdf2 | 🟡 | OCR → searchable PDF ✅ |
 | Word (.docx) | LangChain DocLoader | 🟢 | Clean extraction |
 | Excel (.xlsx) | LangChain + openpyxl | 🟢 | Tables + structured data |
-| Images with tables | pdfplumber | 🟡 | Digital PDFs only |
 | CAD drawings (DXF/DWG) | PyMuPDF | 🟡 | Text fields only — no geometry |
 | Email (.msg/.pst) | extract-msg* | 🔴 | Phase 2 |
 | CAD metadata (NX) | NX Open API** | 🔴 | Phase 3 |
-| JT 3D files | jt-js + three.js* | 🔴 | Phase 2 |
 
 ### 9.2 Chunking Strategy
 
@@ -519,11 +534,6 @@ If Engineer A searches for M16x20 and Engineer B searches for M16x21:
 | Phase 2b | 50 images | Better recognition — more part types |
 | Phase 2c | 500 images | Production ready — high accuracy |
 
-> Dataset source: Roboflow Universe — pre-labeled fastener datasets available.
-> ChromaDB architecture already supports this — image chunks get:
-> `module="partseek"` + `doc_type="Image"` + `category="Supplier-Fastener"`
-> No restructuring needed when YOLO is added.
-
 ---
 
 ## 11. System Architecture
@@ -535,10 +545,21 @@ React Frontend (port 8081)
         ↓
 FastAPI Backend (port 8001)
         ↓
-module filter → ChromaDB "knowseek" collection
-        ↓
-module="docseek"  → llama3 → text answer + source
-module="partseek" → structured list + collision check
+┌─────────────────────────────────────┐
+│  Hybrid Search Pipeline             │
+│                                     │
+│  1. Domain Check                    │
+│     No keywords → 🔴 RED — STOP    │
+│        ↓                            │
+│  2. ChromaDB Semantic Search        │
+│     Find similar chunks             │
+│        ↓                            │
+│  3. BM25 Reranking                  │
+│     BM25=0 → 🔴 RED override       │
+│        ↓                            │
+│  4. llama3 (GREEN/YELLOW only)      │
+│     Generate answer                 │
+└─────────────────────────────────────┘
         ↓
 Answer + confidence 🟢🟡🔴 + source → Frontend
 ```
@@ -548,7 +569,6 @@ Answer + confidence 🟢🟡🔴 + source → Frontend
 ## 12. Metadata Schema
 
 Every document chunk stored in ChromaDB has metadata attached.
-This prevents hallucination — llama3 can only answer based on verified source chunks.
 
 ### Base Schema — All Documents (rev06_001)
 
@@ -558,42 +578,23 @@ metadata = {
     "filename":     "OEM-G_Corrosion_PM.pdf",
     "page":         14,
     "chunk_index":  3,
-    "oem_code":     "OEM-G",        # OEM-G / OEM-M / OEM-Z / OEM-H / OEM-S
-    "category":     "Corrosion",    # Corrosion / Painting / OEM-Fastener /
-                                    # Supplier-Fastener / Bracket / General
+    "oem_code":     "OEM-G",
+    "category":     "Corrosion",
     "module":       "docseek",      # docseek / partseek / normseek / costseek
-    "doc_type":     "Standard",     # 1-Pager / Datasheet / Standard / Lastenheft
-    "language":     "EN",           # DE / EN — auto-detected by get_language()
+    "doc_type":     "Standard",
+    "language":     "EN",
     "verified":     True,
-    "chunk_config": "medium",       # small / medium / large
+    "chunk_config": "medium",
 }
 ```
 
 ### Category → Module Mapping
 
 ```python
-# PartSeek categories — module="partseek"
 PART_CATEGORIES = ["OEM-Fastener", "Supplier-Fastener", "Bracket"]
+# → module="partseek"
 
-# DocSeek categories — module="docseek"
-# Everything else: Corrosion, Painting, General
-```
-
-### Note on Categorization
-
-> Categorization is based on **filename** — not chunk content.
-> All chunks from one file get the same category and module.
-> This is a known limitation — see Section 15.
-
-### Drawing Warning — Anti-Hallucination
-
-```python
-metadata = {
-    ...
-    "geometry":  False,
-    "text_only": True,
-    "warning":   "Geometry not extractable — text fields only."
-}
+# Everything else → module="docseek"
 ```
 
 ---
@@ -603,38 +604,40 @@ metadata = {
 ```
 KnowSeek/
 ├── 01_backend/
-│   ├── main.py             ✅ rev06_001 — FastAPI port 8001
+│   ├── main.py             ✅ rev07_002 — FastAPI port 8001
 │   ├── modules/
 │   │   ├── 01_partseek/
-│   │   │   ├── ingest.py   ✅ rev06_001 — calls DocSeek ingest
-│   │   │   ├── search.py   ✅ rev06_001 — filter module="partseek"
-│   │   │   └── answer.py   ✅ rev06_001 — structured results + collision
+│   │   │   ├── ingest.py   ✅ rev06_001
+│   │   │   ├── search.py   ✅ rev07_002
+│   │   │   └── answer.py   ✅ rev07_002
 │   │   ├── 02_docseek/
-│   │   │   ├── ingest.py   ✅ rev06_001 — load + OCR + module tag + store
-│   │   │   ├── search.py   ✅ rev06_001 — filter module="docseek"
-│   │   │   └── answer.py   ✅ rev06_001 — RAG + llama3 + OEM comparison
+│   │   │   ├── ingest.py   ✅ rev06_001
+│   │   │   ├── search.py   ✅ rev07_002 — Hybrid Search
+│   │   │   └── answer.py   ✅ rev07_002 — Hybrid Search
 │   │   ├── 03_normseek/    ⏳ Phase 2
 │   │   └── 04_costseek/    ⏳ Phase 3
 │   └── utils/
-│       └── check_pdfs.py   ✅ rev06_001 — auto OCR for all modules
+│       ├── check_pdfs.py   ✅ rev06_001
+│       ├── yolo_ingest.py  ✅ rev07_001
+│       └── yolo_train.py   ✅ rev07_001
 ├── 02_frontend/
 │   └── 01_src/             ✅ React running port 8081
 ├── 03_docs/
-│   ├── discovery/          ← original planning docs (historical)
+│   ├── discovery/
 │   ├── pictures/
 │   │   └── okr_diagram.svg
-│   └── RnD_DESCRIPTION.md  ← This file — rev06_001
+│   ├── RnD_DESCRIPTION.md  ← This file — rev07_002
+│   └── YOLO_GUIDE.md       ✅ rev07_001
 ├── 04_progress/
 │   └── sprint_logs/
-│       └── SPRINT_PLAN.md  ← rev06_001
-├── 05_data/                ← Local only — never pushed to GitHub
-│   ├── 01_Fasteners/       ← PDFs (OCR converted) ✅
-│   ├── 02_Specifikation/   ← OEM specification PDFs ✅
-│   └── 03_Painting/        ← Paint standard PDFs ✅
+│       └── SPRINT_PLAN.md  ← rev07_002
+├── 05_data/
+│   ├── 01_Fasteners/
+│   ├── 02_Specifikation/
+│   ├── 03_Painting/
+│   └── 04_Images/          ← Phase 2 — YOLO/LLaVA images
 ├── 06_notebooks/
-│   └── EDA.ipynb           ✅ rev06_001 — Chapter 1-6
-├── build_ppt.py
-├── docker-compose.yml      ← Planned Phase 2
+│   └── EDA.ipynb           ✅ rev07_002
 ├── .gitignore
 ├── LICENSE
 ├── README.md               ✅ rev06_001
@@ -649,25 +652,28 @@ KnowSeek/
 |------|-------|------|-----------------|
 | Week 1 | 10–16.03 | Repo + Frontend + PM + Environment | ✅ Done |
 | Week 2 | 17–20.03 | Midterm ready | ✅ EDA + MLFlow + Midterm PPT delivered |
-| Week 3 | 21–26.03 | DocSeek + PartSeek + FastAPI | ✅ RAG pipeline + FastAPI running |
+| Week 3 | 21–26.03 | DocSeek + PartSeek + FastAPI + Hybrid Search | ✅ All running |
 | Week 4 | 27.03 | Dry Run + Stakeholder PPT | Live demo + repo clean |
 | Final | 02.04 | Stakeholder Presentation | Final delivery |
 
-### Week 3 — Status (21–25.03)
+### Week 3 — Status (26.03)
 
 | Area | Status | Notes |
 |------|--------|-------|
 | FastAPI main.py | ✅ | Running port 8001 — DocSeek + PartSeek |
 | ChromaDB restructuring | ✅ | "docseek" → "knowseek" + module field |
 | ingest.py rev06_001 | ✅ | New CATEGORY_MAP + get_module() |
-| search.py DocSeek rev06_001 | ✅ | where=module="docseek" |
-| search.py PartSeek rev06_001 | ✅ | where=module="partseek" |
-| answer.py DocSeek rev06_001 | ✅ | RAG + OEM comparison |
-| answer.py PartSeek rev06_001 | ✅ | Structured results + collision |
+| search.py DocSeek rev07_002 | ✅ | Hybrid Search: Domain + ChromaDB + BM25 |
+| answer.py DocSeek rev07_002 | ✅ | llama3 only for GREEN/YELLOW |
+| search.py PartSeek rev07_002 | ✅ | where=module="partseek" |
+| answer.py PartSeek rev07_002 | ✅ | Structured results + collision |
 | check_pdfs.py | ✅ | Auto OCR in utils/ |
-| EDA Notebook rev06_001 | ✅ | Chapter 1-6 + knowseek collection |
-| 39 docs / 121 chunks | ✅ | 4 categories — docseek + partseek |
+| yolo_ingest.py | ✅ | LLaVA + YOLO image ingestion ready |
+| yolo_train.py | ✅ | YOLO training pipeline ready |
+| EDA Notebook rev07_002 | ✅ | Chapter 1-6 + Hybrid Search viz |
 | Frontend connected to backend | 🔜 | main_sia07 |
+| Technical PPT | 🔜 | main_sia07 |
+| Dress rehearsal | 🔜 | 26.03 |
 
 ---
 
@@ -675,15 +681,12 @@ KnowSeek/
 
 | Limitation | Impact | Workaround | When Fixed |
 |------------|--------|------------|------------|
-| Categorization based on filename only | Wrong module for some docs | Careful file naming | Phase 2 — chunk-level categorization |
+| Categorization based on filename only | Wrong module for some docs | Careful file naming | Phase 2 |
 | All chunks from one file = same module | Cross-module docs not split | Accepted for MVP | Phase 2 |
-| "iso" keyword too broad | CRASH-ISO docs → partseek | Remove "iso" from CATEGORY_MAP | rev06_002 |
-| Geometry from drawings not extractable | Image search limited | Text fields only | Phase 2 LLaVA / YOLO |
+| Semantic search = relative similarity | Nonsense queries get YELLOW | Hybrid Search BM25 filter ✅ | Fixed rev06_002 |
+| Domain keywords list is manual | New topics not covered | Extend DOMAIN_KEYWORDS | Ongoing |
+| Geometry from drawings not extractable | Image search limited | Text fields only | Phase 2 YOLO |
 | Scanned PDFs — OCR quality varies | Some docs partially indexed | Warning shown | MVP accepted |
-| OCR on technical drawings — partial | Symbols (±, ⌀, °) often missed | Use digital PDFs | MVP accepted |
-| Embedding space changes with dataset size (Hypothesis) | EDA observation: 59 chunks → correct RED for nonsense. 121 chunks → score 0.797 for same query. Root cause: Semantic search finds relative best match, not absolute fit. **Question:** "Which chunk is best?" (relative) vs "Does this fit our knowledge?" (absolute). **Verification in progress** | **Hybrid Search (BM25 + Semantic):** Use BM25 as absolute filter — if BM25 score = 0 (no keywords match), return RED immediately. Only run semantic search if BM25 > 0. Answers the right question: "Does this query fit?" ✅ MVP-ready | Phase 2 exploration |
-| High ChromaDB score ≠ good answer | Misleading confidence signal | Explain in UI | Phase 2 |
-| Large Lastenhefte (300p) — slow | Ingestion takes time | Background processing | MVP accepted |
 | Mac M1 16GB — resource limit | Can't run all services at once | Stop unused services | Docker Compose |
 | No user authentication | All docs visible to all | Accepted for MVP demo | Phase 2 |
 | Manual document ingestion | No auto-update | Run ingest script manually | Phase 2 watchdog |
@@ -702,9 +705,7 @@ KnowSeek/
 | JT 3D Viewer | three.js + jt-js |
 | Multi-user + auth | Team features |
 | Auto folder watcher | watchdog library |
-| Email parsing | extract-msg / python-pst |
-| CAD metadata from NX | NX Open API |
-| Chunk-level categorization | LLM analyzes chunk text for better module assignment |
+| Chunk-level categorization | LLM analyzes chunk text |
 
 ### Phase 3 (Production)
 
@@ -712,7 +713,6 @@ KnowSeek/
 |---------|-------|
 | CostSeek.ai | Design-to-cost analysis |
 | Part project usage | Where is each part used |
-| Recommended torque values | Linked to NormSeek |
 | ERP / SAP connection | Structured database integration |
 
 ---
@@ -738,16 +738,12 @@ KnowSeek/
 - No file listings — only summary (count + size)
 - No filenames visible in output
 - Unsupported file types → warning shown early
-- Data path shown — not file content
 
 ### PDF Readability Check — Auto OCR
-Before ingest, all PDFs are checked for readable text.
 - Step 1: Check each PDF — how many chars?
 - Step 2: If 0 chars → OCR automatically applied
 - Step 3: Check again after OCR
 - Step 4: If still 0 chars → needs YOLO (Phase 2)
-
-This check runs automatically in EDA Chapter 2.2.0 via `check_pdfs.py`.
 
 ### Supported File Types
 ✅ .pdf .png .webp .jpg .docx .xlsx
@@ -758,7 +754,6 @@ This check runs automatically in EDA Chapter 2.2.0 via `check_pdfs.py`.
 ## 19. ChromaDB Architecture — One Collection, Module Filtering
 
 All KnowSeek modules share ONE ChromaDB collection called **"knowseek"**.
-Data is not separated by collection — it is separated by the `module` metadata field.
 
 ```
 Collection "knowseek":
@@ -773,30 +768,167 @@ Collection "knowseek":
 └────────────────────────────────────────────────────┘
 ```
 
-**Why one collection:**
-- No data duplication — shared documents accessible by all modules
-- Easy to scale — add NormSeek/CostSeek by adding module tag
-- Simple ingest — one pipeline for all modules
-
-**Why module filtering:**
-- Each module shows only relevant results
-- DocSeek gets documents — PartSeek gets parts
-- Different response formats per module
-- User chooses module in frontend — gets focused results
-
-**Search examples:**
-```python
-# DocSeek — only document chunks
-where={"module": "docseek"}
-
-# PartSeek — only part chunks
-where={"module": "partseek"}
-
-# Cross-module — all chunks (no filter)
-# e.g. for future global search feature
-```
+**Why one collection:** No duplication, easy to scale, one ingest pipeline.
+**Why module filtering:** Each module gets focused results in the right format.
 
 ---
 
+## 20. Hybrid Search — Design Decision
+
+**Problem discovered during EDA (rev06_002):**
+
+Semantic search (ChromaDB) answers the relative question: *"Which chunk is most similar to this query?"* — it always returns a result, even for nonsense queries like "bitcoin cryptocurrency".
+
+In our tests: "bitcoin" → Score 0.764 🟡 — almost identical to "salt spray test" → Score 0.776 🟡. This is misleading and dangerous for users who trust the confidence signal.
+
+**Root cause:**
+nomic-embed-text is a general-purpose embedding model. It does not understand automotive domain context — it only sees vector distances. With only 93 DocSeek chunks, the vector space is dense and every query lands close to something.
+
+**Solution — Hybrid Search (BM25 + Semantic):**
+
+```
+Step 1 — Domain Check:
+Query → check against DOMAIN_KEYWORDS list
+No match → 🔴 RED immediately
+No ChromaDB call, no llama3 call → fast
+
+Step 2 — ChromaDB Semantic Search:
+Find top N chunks by vector similarity
+
+Step 3 — BM25 Reranking:
+Score returned chunks by keyword match
+BM25 = 0.0 → no keywords matched → override to 🔴 RED
+BM25 > 0.0 → keywords found → keep ChromaDB signal
+```
+
+**Test results (rev06_002):**
+```
+salt spray test    → BM25: 0.93  → 🟡 YELLOW ✅
+corrosion standard → BM25: 0.224 → 🟢 GREEN  ✅
+bitcoin crypto     → BM25: 0.0   → 🔴 RED    ✅
+unknown XYZ 999    → BM25: 0.0   → 🔴 RED    ✅
+```
+
+**Performance benefit:**
+- Nonsense queries → RED in < 1ms (no ChromaDB, no llama3)
+- Valid queries → full pipeline as before
+- llama3 is NEVER called for out-of-domain queries
+
+**This is a product feature, not just a workaround:**
+The system now correctly refuses to answer questions outside its knowledge domain — a critical requirement for industrial use where wrong answers have real consequences.
+
+---
+
+
+## 21. Progressive Query Refinement — The Track Method
+
+**Problem:**
+A single free-text query is often too broad to get a precise answer.
+"salt spray test" could mean duration, pass/fail criteria, OEM comparison,
+or test method standard. The system returns YELLOW — correct but imprecise.
+
+**Solution — The Track Method (Gleis-Methode):**
+
+The system does not search immediately. Instead it reads the query,
+identifies what is already known, and shows only the tracks still open.
+The user picks one track per level. After 3 levels the filter is precise.
+
+```
+Track 1 — What topic?     → filters the data category
+Track 2 — Which source?   → filters by OEM or property
+Track 3 — What intent?    → narrows to exact value or action
+```
+
+**Key principle — adaptive filtering:**
+
+Tracks that are already answered by the query are greyed out automatically.
+Example: query "M8 Torx screw" → Thread and Drive type are already known
+→ only Strength, Coating, Self-lock remain open in Track 2.
+
+**DocSeek — Track diagram:**
+
+![DocSeek Track Example](pictures/docseek_track_example.svg)
+
+**DocSeek — Available tracks (based on real ChromaDB data):**
+
+```
+Track 1 — Topic (3 options):
+  Corrosion   → 55 chunks
+  Painting    → 19 chunks
+  General     → 19 chunks — shown only if query has no clear topic
+
+Track 2 — OEM Source (5 options):
+  OEM-G       → Mercedes (7 chunks)
+  OEM-M       → GM (14 chunks)
+  OEM-Z       → Volvo (8 chunks)
+  OEM-S       → Internal (7 chunks)
+  All OEMs    → General norms (51 chunks)
+
+Track 3 — Intent (3 options):
+  Find requirement  → POST /api/docseek/query
+  Compare OEMs      → POST /api/docseek/compare
+  Find standard     → POST /api/docseek/query
+```
+
+**PartSeek — Track diagram:**
+
+![PartSeek Track Example](pictures/partseek_track_example.svg)
+
+**PartSeek — Available tracks (based on real ChromaDB data):**
+
+```
+Track 1 — Part type (3 options):
+  Fastener    → Supplier-Fastener category
+  Bracket     → Bracket category
+  OEM Norm    → OEM-Fastener category
+
+Track 2 — Property (auto-filtered by query):
+  Thread size → M6 / M8 / M10 / M12 / M16  ← hidden if known
+  Strength    → 8.8 / 10.9 / 12.9
+  Drive type  → Torx / Hex / XZN            ← hidden if known
+  Coating     → zinc / KTL / geomet / blank
+  Self-lock   → yes / no
+
+Track 3 — Specific value:
+  Selected value appended to final query
+  → POST /api/partseek/query with filter
+```
+
+**How it works technically:**
+
+```
+Step 1: Query analysis (frontend, no API call)
+  → detect known values (M8, Torx, 10.9...)
+  → grey out tracks that are already answered
+
+Step 2: User selects open tracks
+  → filter string built incrementally
+
+Step 3: Final search with precise filter
+  → POST /api/partseek/query or /api/docseek/query
+  → Expected confidence: > 0.90 (GREEN)
+```
+
+**Example refined queries:**
+
+| Selection path | Filter applied | Expected confidence |
+|---------------|----------------|-------------------|
+| Corrosion → OEM-G → Find requirement | module=docseek, category=Corrosion, oem_code=OEM-G | > 0.90 🟢 |
+| Corrosion → All OEMs → Compare OEMs | compare_oems() | per OEM |
+| Fastener → Strength → 10.9 | module=partseek, category=Supplier-Fastener | > 0.85 🟢 |
+| Fastener → Coating → zinc | module=partseek + zinc in query | > 0.85 🟢 |
+| Fastener → Drive → Torx | `Torx drive screw fastener` |
+
+**Colors used in diagram:**
+
+| Color | Meaning |
+|-------|---------|
+| Teal / Blue | Root node — starting point |
+| Purple | Level 1 — type selection |
+| Coral | Level 2 — category selection |
+| Amber | Level 3 — specific property |
+
+**Status:** 🟡 Phase 2 — tree structure defined, frontend implementation planned for main_sia08
+
 *This document is the single source of truth for all KnowSeek.ai development.*
-*Version: rev06_001 — Last updated: 25.03.2026 — Branch: main_sia07*
+*For version, revision, last updated date, and branch, see the header above.*
