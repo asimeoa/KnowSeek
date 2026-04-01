@@ -1,28 +1,44 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev05_005 — Last updated: 26.03.2026 um 10:14 — Branch: main_sia07**
+**Version: rev09_Alpha — Last updated: 31.03.2026 — Branch: main_sia09**
 *Solo Project — Antonios Simeonidis*
 
 ---
 
 ## Deadlines
 
-| Date | Deliverable |
-|------|-------------|
-| 20.03.2026 | **Midterm** ✅ — PPT delivered |
-| 27.03.2026 | **Dry Run** — Live demo + 10 min presentation |
-| 02.04.2026 | **Stakeholder** — Final presentation |
+| Date | Deliverable | Status |
+|------|-------------|--------|
+| 20.03.2026 | **Midterm** ✅ — PPT delivered | ✅ Done |
+| 27.03.2026 | **Dry Run** — Live demo | ✅ Done |
+| **02.04.2026** | **Stakeholder Presentation** | 🔜 **CRITICAL** |
+
+---
+
+## Final Sprint Tasks — rev08.001 & rev09 (31.03. – 01.04.)
+
+| Day | Issue | Task | Component | Status |
+|-----|-------|------|-----------|--------|
+| 31.03 | #70 | **Survival Fix (rev08.001):** Over-Retrieval N×4 + BM25 Hybrid Pool | `search.py` | ✅ Done (rev08_003) |
+| 31.03 | #71 | **Survival Fix (rev08.001):** Metadata-Pass Extension — thread/material/oem fields in ingest | `ingest.py` | ✅ Done (rev08.001) |
+| 31.03 | #75 | **Data Pipeline:** `split_gm_catalog.py` — GM pages per thread size | root | ✅ Done |
+| 31.03 | #76 | **Data Pipeline:** `split_volvo_catalog.py` — Volvo fastener pages | root | ✅ Done |
+| 31.03 | #77 | **Validation:** `test_extraction.py` — 4-case extraction test suite | root | ✅ Done |
+| 01.04 | #72 | **Precision Booster (rev09):** Keyword-Booster (Hydrogen/Shear) | `search.py` | 🔜 Next |
+| 01.04 | #73 | **Precision Booster (rev09):** Confidence Re-Calibration 🟢🟡🔴 | `answer.py` | 🔜 Backlog |
+| 01.04 | #74 | **PPT Production:** Stakeholder Presentation (4h Block) | `docs/` | 🔜 Backlog |
+| 02.04 | — | **Final Delivery & Live Demo** | — | 🔜 Backlog |
 
 ---
 
 ## Capstone Requirements Checklist
 
-- [ ] Business question clearly stated with background and impact
+- [x] Business question clearly stated with background and impact
 - [x] Technical EDA completed in Python
 - [x] Multiple models tried and compared
 - [x] MLFlow experiment tracking in place
 - [x] All work stored in GitHub repo
-- [ ] Final presentation slides in GitHub repo
-- [ ] 10 min presentation ready
+- [ ] **Final presentation slides in GitHub repo** (Deadline: 02.04.)
+- [ ] **10 min presentation ready** (Timed rehearsal)
 - [x] Solo approval confirmed by coach
 
 ---
@@ -187,6 +203,52 @@
 | — | Repo clean | No temp files, all committed |
 | — | **Final Presentation delivered** | 10 min — live demo included |
 
+---
+
+## Week 4 — Retrieval Refactor + Precision Pivot (29.03 - 31.03 / main_sia09)
+
+**Goal:** Implement rev08.001 — Filter-Driven Retrieval + Hybrid Precision (rev09).
+
+### Architecture Change Summary
+
+| Before (rev07) | After (rev08.001 / rev08_003) |
+|---|---|
+| Query → Semantic Search → BM25 → LLM | Query → Track Engine → Filter → N×4 Retrieval → BM25 Rerank → optional LLM |
+| Large unfiltered search space | Narrow pre-filtered, deeper search pool |
+| Scores stuck ~0.78–0.82 YELLOW | Thread-exact results boosted +50%, target GREEN |
+
+### Sprint Tasks — main_sia09
+
+| Issue | Task | File | Status |
+|-------|------|------|--------|
+| #60 | Build Track Engine | `utils/track_engine.py` NEW | ✅ |
+| #61 | Integrate Track Engine in FastAPI | `main.py` UPDATE | ✅ |
+| #62 | PartSeek: Apply metadata filter before search | `01_partseek/search.py` UPDATE | ✅ |
+| #63 | PartSeek: Remove LLM call | `01_partseek/answer.py` UPDATE | ✅ |
+| #64 | DocSeek: Apply metadata filter before semantic search | `02_docseek/search.py` UPDATE | ✅ |
+| #65 | DocSeek: Improve LLM prompt (best chunk selection) | `02_docseek/answer.py` UPDATE | ✅ |
+| #66 | Chunking: Reduce chunk_size 500 → 250, re-ingest | `02_docseek/ingest.py` UPDATE | ✅ |
+| #67 | Evaluate n_results 5 → 10 (recall test) | `search.py` both modules | ✅ |
+| #70 | Over-Retrieval N×4 pool + BM25 Hybrid scoring (60/40) | `01_partseek/search.py` rev08_003 | ✅ |
+| #71 | Metadata-Pass: extract_thread/material/oem/part_type/surface_color | `01_partseek/ingest.py` rev08.001 | ✅ |
+| #75 | Data Pipeline: split GM catalog by thread size | `split_gm_catalog.py` | ✅ |
+| #76 | Data Pipeline: split Volvo catalog pages | `split_volvo_catalog.py` | ✅ |
+| #77 | Extraction Validation: 4-case test (Volvo/DIN/GM/Stainless) | `test_extraction.py` | ✅ |
+
+### Definition of Done (rev08.001 + rev08_003)
+
+- [x] `track_engine.py` — `analyze_query()` + `build_where_filter()` implemented
+- [x] Missing fields returned to frontend for Track UI
+- [x] ChromaDB uses `where=filter` BEFORE semantic search
+- [x] PartSeek returns deterministic results without LLM
+- [x] DocSeek LLM receives ranked + filtered chunks
+- [x] Score > 0.85 reachable on known test queries
+- [x] Debug logging in place: `TRACK:` + `FILTER:` printed
+- [x] `search.py` rev08_003 — N×4 pool, BM25 Hybrid (60/40), Thread-Boost ×1.5
+- [x] `ingest.py` rev08.001 — structured metadata extraction (thread, material, oem, part_type, surface_color)
+- [x] GM + Volvo catalog PDF splitters ready for re-ingest
+- [x] Extraction regression tests pass (4 test cases)
+
 ### Stakeholder PPT — Slide Structure
 
 | Slide | Content |
@@ -218,22 +280,27 @@
 | ChromaDB | 1.5.5 | ✅ Installed |
 | rank-bm25 | 0.2.2 | ✅ Installed |
 | MLFlow | 3.10.1 | ✅ Running — BM25 + RAG logged |
-| 05_data | — | ✅ 39 docs / 121 chunks / 4 categories |
-| ingest.py (DocSeek) | rev05_003 | ✅ Done — OCR + language detect |
-| search.py (DocSeek) | rev06_001 | ✅ Done — filter + confidence + COLLECTION_NAME=knowseek |
-| answer.py (DocSeek) | rev05_003 | ✅ Done — RAG + OEM comparison |
-| check_pdfs.py | rev05_003 | ✅ Done — auto OCR pipeline |
-| ingest.py (PartSeek) | rev05_003 | ✅ Done — calls DocSeek ingest |
-| search.py (PartSeek) | rev05_003 | ✅ Done — Bolts+Torque filter |
-| answer.py (PartSeek) | rev05_003 | ✅ Done — structured results + collision |
-| FastAPI main.py | rev05_004 | ✅ Running — port 8001 — knowseek health check ✅ |
-| EDA Notebook | rev05_003 | ✅ Chapter 1-6 complete |
+| 05_data | — | ✅ 39 docs / 293 chunks / 4 categories |
+| ingest.py (DocSeek) | rev08_001 | ✅ Auto chunk profiles (250/50, 180/30, 350/50) |
+| search.py (DocSeek) | rev08_001 | ✅ Filter-first retrieval + hybrid search |
+| answer.py (DocSeek) | rev08_001 | ✅ Prompt fix: best chunk + OEM focus |
+| check_pdfs.py | rev06_001 | ✅ Done — auto OCR pipeline |
+| ingest.py (PartSeek) | **rev08.001** | ✅ Metadata extraction: thread/material/oem/part_type/surface_color |
+| search.py (PartSeek) | **rev08_003** | ✅ N×4 pool + BM25 Hybrid (60/40) + Thread-Boost ×1.5 |
+| answer.py (PartSeek) | rev08_001 | ✅ No LLM + deterministic output |
+| FastAPI main.py | rev08_001 | ✅ Running — port 8001 — unified /api/query |
+| **track_engine.py** | **rev08_001** | **✅ Active core component** |
+| split_gm_catalog.py | rev06_001 | ✅ GM Fastener Catalog PDF splitter |
+| split_volvo_catalog.py | rev01_001 | ✅ Volvo Design Guidelines PDF splitter |
+| test_extraction.py | — | ✅ 4-case metadata extraction regression tests |
+| EDA Notebook | rev07_002 | ✅ Chapter 1-6 complete |
 | Midterm PPT | rev05_003 | ✅ Delivered 20.03.2026 |
-| Technical PPT | — | 🔜 main_sia07 |
-| Stakeholder PPT | — | 🔜 main_sia07 |
-| RnD_DESCRIPTION.md | rev05_003 | ✅ Done |
-| README.md | rev05_003 | ✅ Done |
-| requirements.txt | rev05_003 | ✅ Done |
+| Technical PPT | — | 🔜 main_sia09 |
+| Stakeholder PPT | — | 🔜 **01.04 — 4h Block** |
+| RnD_DESCRIPTION.md | rev09_Alpha | ✅ §32–35 added 31.03.2026 |
+| SPRINT_PLAN.md | rev09_Alpha | ✅ Updated 31.03.2026 |
+| README.md | rev06_001 | ✅ Done |
+| requirements.txt | rev06_001 | ✅ Done |
 | build_ppt.py | rev05_002 | ✅ Done |
 | docker-compose.yml | — | 🔜 Phase 2 |
 

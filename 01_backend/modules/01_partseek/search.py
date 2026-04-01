@@ -5,20 +5,15 @@ Searches ChromaDB for fastener and part documents.
 Uses same ChromaDB as all KnowSeek modules,
 filtered by module="partseek".
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev08_003 — 31.03.2026
+Branch:  main_sia09
 
 Chapters:
     1. Imports
     2. Config
     3. Helper Functions
-        3.1 get_confidence_signal()
-        3.2 format_part_result()
     4. Main Functions
-        4.1 get_collection()
-        4.2 search_part()
-        4.3 search_part_with_filter()
-    5. Run
+    5. Run Tests
 """
 
 # ─────────────────────────────────────────────────────
@@ -26,72 +21,31 @@ Chapters:
 # ─────────────────────────────────────────────────────
 
 import time
+import re
 from pathlib import Path
 
 import chromadb
-from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
-
+from rank_bm25 import BM25Okapi
 
 # ─────────────────────────────────────────────────────
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
 DB_PATH         = str(Path(__file__).resolve().parents[3] / "chroma_db")
-COLLECTION_NAME = "knowseek"   # ONE collection for all modules
-MODULE          = "partseek"   # this module's filter value
+COLLECTION_NAME = "knowseek"
+MODULE          = "partseek"
 N_RESULTS       = 5
 
 # Confidence thresholds
 THRESHOLD_GREEN  = 0.85
 THRESHOLD_YELLOW = 0.60
 
-# Thread sizes we support
-THREAD_SIZES = ["M4", "M5", "M6", "M8", "M10", "M12", "M14", "M16", "M20"]
-
-# Length range (mm)
-LENGTH_MIN = 10
-LENGTH_MAX = 45
-
-# OEM suffix mapping — from filename suffix to real OEM name
-OEM_SUFFIX_MAP = {
-    "_PM":  "Mercedes-Benz",
-    "_PG":  "GM",
-    "_PV":  "Volvo",
-    "_CH":  "China / Internal",
-    "_SIA": "Internal",
-}
-
-# Canonical PartSeek part types (specific -> generic order)
-PART_TYPE_KEYWORDS = [
-    ("flange_screw", ["flange screw", "flanschschraube", "bundschraube", "hex flange"]),
-    ("threaded_insert", ["threaded insert", "gewindeeinsatz", "insert nut", "helicoil"]),
-    ("rivet", ["rivet", "blind rivet", "niet", "nietmutter"]),
-    ("washer", ["washer", "scheibe", "unterlegscheibe", "federscheibe"]),
-    ("nut", ["nut", "mutter", "sechskantmutter", "hex nut"]),
-    ("bolt", ["bolt", "bolzen", "hex bolt", "schraubbolzen"]),
-    ("screw", ["screw", "schraube", "torx", "innensechskant", "socket head"]),
-    ("bracket", ["bracket", "winkel", "clip", "clamp", "halter"]),
-]
-
-# Which result types are still acceptable for a specific query intent
-PART_TYPE_COMPATIBILITY = {
-    "flange_screw": {"flange_screw", "screw", "bolt"},
-    "screw": {"screw", "flange_screw", "bolt"},
-    "bolt": {"bolt", "screw", "flange_screw"},
-    "nut": {"nut", "threaded_insert"},
-    "washer": {"washer"},
-    "rivet": {"rivet"},
-    "threaded_insert": {"threaded_insert", "nut"},
-    "bracket": {"bracket"},
-}
-
-
 # ─────────────────────────────────────────────────────
 # 3. HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────
 
-# 3.1 get_confidence_signal
 def get_confidence_signal(score: float) -> str:
+    """Convert score to traffic light signal"""
     if score >= THRESHOLD_GREEN:
         return "GREEN"
     elif score >= THRESHOLD_YELLOW:
@@ -100,134 +54,40 @@ def get_confidence_signal(score: float) -> str:
         return "RED"
 
 
-def infer_part_type(text: str) -> str | None:
-    """Infer canonical part type from free text using domain keywords."""
-    text_low = (text or "").lower()
-    for part_type, keywords in PART_TYPE_KEYWORDS:
-        if any(kw in text_low for kw in keywords):
-            return part_type
-    return None
-
-
-def rerank_by_part_type(results: list[dict], query: str) -> list[dict]:
-    """
-    Re-rank semantic results using query intent vs inferred part type.
-    This compensates for broad categories like Supplier-Fastener.
-    """
-    query_type = infer_part_type(query)
-    if not query_type:
-        return results
-
-    compatible = PART_TYPE_COMPATIBILITY.get(query_type, {query_type})
-
-    for r in results:
-        result_type = r.get("part_type")
-        adjusted = r.get("score", 0.0)
-
-        if result_type == query_type:
-            adjusted += 0.14
-        elif result_type in compatible:
-            adjusted += 0.07
-        elif result_type is None:
-            adjusted -= 0.03
-        else:
-            adjusted -= 0.12
-
-        # Keep score in [0, 1] after type-based adjustment.
-        r["score"] = round(max(0.0, min(1.0, adjusted)), 4)
-        r["signal"] = get_confidence_signal(r["score"])
-        r["query_type"] = query_type
-
-    results.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-    for i, r in enumerate(results, start=1):
-        r["rank"] = i
-
-    return results
-
-
-# 3.2 format_part_result
 def format_part_result(text: str, metadata: dict, distance: float, rank: int) -> dict:
-    """
-    Format a single ChromaDB result for PartSeek.
-    Extracts part-specific info from text + metadata.
-    """
-    similarity = round(1 - (distance / 2), 4)
-
-    # Try to detect thread size from text
-    thread_size = None
-    for t in THREAD_SIZES:
-        if t.lower() in text.lower():
-            thread_size = t
-            break
-
-    # Try to detect strength class from text
-    strength_class = None
-    for sc in ["12.9", "10.9", "8.8", "8.0", "6.8", "4.8"]:
-        if sc in text:
-            strength_class = sc
-            break
-
-    # Try to detect drive type from text
-    drive_type = None
-    for d in ["Torx", "Hex", "Innensechskant", "Phillips", "Schlitz", "TORX"]:
-        if d.lower() in text.lower():
-            drive_type = d
-            break
-
-    # Try to detect coating from text
-    coating = None
-    for c in ["verzinkt", "zinc", "Zn", "KTL", "blank", "phosphatiert"]:
-        if c.lower() in text.lower():
-            coating = c
-            break
-
-    # Try to detect self-locking from text
-    self_locking = any(kw in text.lower() for kw in [
-        "mikroverkapselung", "prevailing torque", "self-lock",
-        "self locking", "klebe", "loctite",
-        "kraftschlüssig", "formschlüssig", "stoffschlüssig",
-        "federscheibe", "sicherungslack"
-    ])
-
-    # Try to detect norm from text
-    norm = None
-    for n in ["DIN EN ISO", "DIN", "MBN", "ISO", "EN"]:
-        if n in text:
-            idx = text.find(n)
-            norm = text[idx:idx+20].strip()
-            break
-
-    # Get OEM real name from filename suffix
-    filename = metadata.get("filename", "")
-    oem_real = None
-    for suffix, real in OEM_SUFFIX_MAP.items():
-        if suffix in filename:
-            oem_real = real
-            break
-
-    part_type = infer_part_type(" ".join([
-        text,
-        metadata.get("filename", ""),
-        metadata.get("category", "")
-    ]))
-
+    """Format search result with new metadata fields"""
+    
+    score = round(1 - (distance / 2), 4)
+    
+    # Signal based on score
+    if score >= 0.7:
+        signal = "GREEN"
+    elif score >= 0.5:
+        signal = "YELLOW"
+    else:
+        signal = "RED"
+    
     return {
-        "rank":           rank,
-        "score":          similarity,
-        "signal":         get_confidence_signal(similarity),
-        "text":           text[:300] + "..." if len(text) > 300 else text,
-        "oem_code":       metadata.get("oem_code", ""),
-        "oem_real":       oem_real,
-        "category":       metadata.get("category", ""),
-        "module":         metadata.get("module", ""),
-        "page":           metadata.get("page", 0),
-        "norm":           norm,
-        "part_type":      part_type,
-        "thread_size":    thread_size,
-        "strength_class": strength_class,
-        "drive_type":     drive_type,
-        "coating":        coating,
-        "self_locking":   self_locking,
+        "rank": rank,
+        "score": score,
+        "signal": signal,
+        "text": text[:200],
+        "filename": metadata.get("filename", "?"),
+        "page": metadata.get("page", "?"),
+        "module": metadata.get("module", "partseek"),
+        "category": metadata.get("category", ""),
+        
+        # NEW metadata fields
+        "thread": metadata.get("thread", "N/A"),
+        "material": metadata.get("material", "N/A"),
+        "part_type": metadata.get("part_type", "N/A"),
+        "surface_color": metadata.get("surface_color", "N/A"),
+        "oem": metadata.get("oem", "N/A"),
+        "length": metadata.get("length", "N/A"),
+        
+        # Legacy (for API compatibility)
+        "oem_code": metadata.get("oem", "N/A"),
+        "oem_real": metadata.get("oem", None),
     }
 
 
@@ -235,59 +95,98 @@ def format_part_result(text: str, metadata: dict, distance: float, rank: int) ->
 # 4. MAIN FUNCTIONS
 # ─────────────────────────────────────────────────────
 
-# 4.1 get_collection
 def get_collection(
     db_path: str = DB_PATH,
     collection_name: str = COLLECTION_NAME
 ) -> chromadb.Collection:
-    """Connect to ChromaDB and return the collection."""
-    ollama_ef = OllamaEmbeddingFunction(
-        url="http://localhost:11434/api/embeddings",
-        model_name="nomic-embed-text"
-    )
+    """Connect to ChromaDB and return collection"""
     client = chromadb.PersistentClient(path=db_path)
-    collection = client.get_collection(
-        name=collection_name,
-        embedding_function=ollama_ef
-    )
+    collection = client.get_collection(name=collection_name)
     return collection
 
 
-# 4.2 search_part
 def search_part(
     query: str,
     n_results: int = N_RESULTS,
     verbose: bool = True
 ) -> list[dict]:
     """
-    Search for parts in ChromaDB.
-    Always filters by module="partseek".
-
-    Usage:
-        results = search_part("M8 Torx screw")
-        results = search_part("Flanschschraube 10.9 verzinkt")
+    Hybrid Search: Semantic + BM25 with metadata boosting
+    
+    Steps:
+    1. Get more results from ChromaDB for BM25 pool
+    2. Calculate BM25 keyword scores
+    3. Combine semantic + BM25 (60/40 split)
+    4. Boost results where thread matches query
+    5. Sort and return top N
     """
+    
     start = time.time()
     collection = get_collection()
-
+    
+    # Step 1: Semantic search - get 4x results for BM25 pool
     raw = collection.query(
         query_texts=[query],
-        n_results=n_results,
+        n_results=n_results * 4,
         where={"module": MODULE},
         include=["documents", "metadatas", "distances"]
     )
-    elapsed = round((time.time() - start) * 1000, 1)
-
+    
+    # Step 2: BM25 keyword scoring
+    documents = raw["documents"][0]
+    tokenized_docs = [doc.split() for doc in documents]
+    bm25 = BM25Okapi(tokenized_docs)
+    bm25_scores = bm25.get_scores(query.split())
+    
+    # Normalize BM25 scores to 0-1 range
+    max_bm25 = max(bm25_scores) if max(bm25_scores) > 0 else 1
+    normalized_bm25 = [score / max_bm25 for score in bm25_scores]
+    
+    # Step 3: Combine semantic + BM25 (60% semantic, 40% keyword)
+    combined = []
+    for i, (semantic_dist, bm25_norm) in enumerate(zip(raw["distances"][0], normalized_bm25)):
+        semantic_score = 1 - semantic_dist
+        hybrid_score = 0.6 * semantic_score + 0.4 * bm25_norm
+        combined.append((i, hybrid_score))
+    
+    # Step 4: Boost if thread matches query
+    query_thread = None
+    for word in query.upper().split():
+        if word.startswith("M") and len(word) > 1 and word[1:].replace(".", "").isdigit():
+            query_thread = word
+            break
+    
+    if query_thread:
+        boosted = []
+        for i, score in combined:
+            doc_thread = raw["metadatas"][0][i].get("thread", "")
+            if doc_thread == query_thread:
+                boosted.append((i, score * 1.5))  # 50% boost for exact match
+            else:
+                boosted.append((i, score))
+        combined = boosted
+    
+    # Step 5: Sort by final score and take top N
+    combined.sort(key=lambda x: x[1], reverse=True)
+    top_indices = [idx for idx, _ in combined[:n_results]]
+    
+    # Step 6: Format results
     results = []
-    for i, (text, meta, dist) in enumerate(zip(
-        raw["documents"][0],
-        raw["metadatas"][0],
-        raw["distances"][0]
-    )):
-        results.append(format_part_result(text, meta, dist, rank=i+1))
-
-    results = rerank_by_part_type(results, query)
-
+    for rank, idx in enumerate(top_indices, 1):
+        # Find final score for this index
+        final_score = next(score for i, score in combined if i == idx)
+        distance = 1 - final_score  # Convert back to distance for formatting
+        
+        results.append(format_part_result(
+            raw["documents"][0][idx],
+            raw["metadatas"][0][idx],
+            distance,
+            rank
+        ))
+    
+    elapsed = round((time.time() - start) * 1000, 1)
+    
+    # Display results if verbose
     if verbose:
         print(f"Query:    {query}")
         print(f"Results:  {len(results)}")
@@ -296,47 +195,46 @@ def search_part(
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
             print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — OEM: {r['oem_code']} ({r['oem_real'] or '?'})")
-            if r["thread_size"]:    print(f"       Thread:   {r['thread_size']}")
-            if r["strength_class"]: print(f"       Strength: {r['strength_class']}")
-            if r["drive_type"]:     print(f"       Drive:    {r['drive_type']}")
-            if r["coating"]:        print(f"       Coating:  {r['coating']}")
-            if r["norm"]:           print(f"       Norm:     {r['norm']}")
-            if r["self_locking"]:   print(f"       Self-locking: Yes")
+            if r["thread"] != "N/A":        print(f"       Thread:   {r['thread']}")
+            if r["material"] != "N/A":      print(f"       Material: {r['material']}")
+            if r["part_type"] != "N/A":     print(f"       Type:     {r['part_type']}")
+            if r["surface_color"] != "N/A": print(f"       Surface:  {r['surface_color']}")
+            if r["length"] != "N/A":        print(f"       Length:   {r['length']} mm")
             print()
-
+    
     return results
 
 
-# 4.3 search_part_with_filter
 def search_part_with_filter(
     query: str,
-    oem_code: str = None,
-    thread_size: str = None,
-    category: str = None,
-    module: str = None,
+    thread: str = None,
+    oem: str = None,
+    material: str = None,
     n_results: int = N_RESULTS,
     verbose: bool = True
 ) -> list[dict]:
     """
-    Search parts with additional filters.
-    Always includes module="partseek" filter.
-
+    Search with metadata filters
+    
     Usage:
-        results = search_part_with_filter("screw", oem_code="OEM-V")
-        results = search_part_with_filter("coating", thread_size="M8")
+        results = search_part_with_filter("screw", thread="M8")
+        results = search_part_with_filter("bolt", oem="Volvo", material="Steel")
     """
+    
     collection = get_collection()
-
-    # Always filter by module — add optional filters on top.
-    # module can be overridden for focused tracks (e.g. REQUIREMENT).
-    module_filter = module or MODULE
-    clauses = [{"module": module_filter}]
-    if oem_code:
-        clauses.append({"oem_code": oem_code})
-    if category:
-        clauses.append({"category": category})
-    where = clauses[0] if len(clauses) == 1 else {"$and": clauses}
-
+    
+    # Build where filter - ChromaDB needs $and for multiple conditions
+    conditions = [{"module": MODULE}]
+    if thread:
+        conditions.append({"thread": thread})
+    if oem:
+        conditions.append({"oem": oem})
+    if material:
+        conditions.append({"material": material})
+    
+    # Use $and if multiple conditions, otherwise single condition
+    where = conditions[0] if len(conditions) == 1 else {"$and": conditions}
+    
     start = time.time()
     raw = collection.query(
         query_texts=[query],
@@ -345,56 +243,47 @@ def search_part_with_filter(
         include=["documents", "metadatas", "distances"]
     )
     elapsed = round((time.time() - start) * 1000, 1)
-
+    
+    # Format results
     results = []
     for i, (text, meta, dist) in enumerate(zip(
         raw["documents"][0],
         raw["metadatas"][0],
         raw["distances"][0]
     )):
-        result = format_part_result(text, meta, dist, rank=i+1)
-
-        # Post-filter by thread size if specified
-        if thread_size and result["thread_size"] != thread_size:
-            continue
-
-        results.append(result)
-
-    results = rerank_by_part_type(results, query)
-
+        results.append(format_part_result(text, meta, dist, rank=i+1))
+    
     if verbose:
         print(f"Query:    {query}")
-        print(
-            f"Filter:   module={module_filter} "
-            f"oem={oem_code or 'all'} category={category or 'all'} thread={thread_size or 'all'}"
-        )
+        print(f"Filter:   thread={thread or 'all'} oem={oem or 'all'} material={material or 'all'}")
         print(f"Results:  {len(results)}")
         print(f"Time:     {elapsed}ms")
         print()
         for r in results:
             signal_icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
-            print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — {r['oem_code']} | {r['thread_size']} | {r['strength_class']} | {r['drive_type']}")
-
+            print(f"  [{r['rank']}] {signal_icon} {r['score']:.3f} — {r['oem']} | {r['thread']} | {r['material']}")
+            print()
+    
     return results
 
 
 # ─────────────────────────────────────────────────────
-# 5. RUN
+# 5. RUN TESTS
 # ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-
+    
     print("=" * 50)
-    print("TEST 1 — Basic Part Search")
+    print("TEST 1 — Hybrid Search")
     print("=" * 50)
-    results = search_part("M8 Torx screw steel")
-
+    search_part("M8 Torx screw steel")
+    
     print("=" * 50)
-    print("TEST 2 — Filtered Search (OEM-V only)")
+    print("TEST 2 — Filtered Search")
     print("=" * 50)
-    results = search_part_with_filter("flange screw", oem_code="OEM-V")
-
+    search_part_with_filter("screw", thread="M8")
+    
     print("=" * 50)
-    print("TEST 3 — Thread Size Filter")
+    print("TEST 3 — OEM Filter")
     print("=" * 50)
-    results = search_part_with_filter("screw coating", thread_size="M8")
+    search_part_with_filter("bolt", oem="Volvo")

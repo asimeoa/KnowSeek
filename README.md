@@ -1,7 +1,7 @@
 # KnowSeek.Ai 
 > **Stop searching. Start knowing.**
 
-**Version:** rev05_003 22.03.2026  - **Branch:** main_sia05
+**Version:** rev08_001 30.03.2026  - **Branch:** main_sia09
 
 KnowSeek.Ai is a local AI knowledge tool built for small engineering companies. Instead of spending hours searching through documents and part libraries, engineers simply ask a question in plain English or German and get a direct answer — with the exact source included. Everything runs on your own computer. No internet needed. No data ever leaves your building.
 
@@ -116,7 +116,10 @@ npm run dev
 
 Open your browser at `http://localhost:8081` — press `Ctrl + C` to stop.
 
-* Start MLFlow (in Terminal):
+* Start MLFlow (in Terminal) check `.venv `is activ:
+```bash
+source .venv/bin/activate
+```
 
 ```bash
 echo http://127.0.0.1:5000/ > .mlflow_uri
