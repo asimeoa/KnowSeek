@@ -3,8 +3,8 @@ main.py — KnowSeek.Ai — FastAPI Backend
 ─────────────────────────────────────────
 REST API connecting Frontend to all KnowSeek modules.
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev08_001 — 30.03.2026
+Branch:  main_sia09
 
 Modules:
     01 PartSeek.Ai  — Part search         ✅ Active
@@ -53,6 +53,13 @@ def load_module(name, path):
     return mod
 
 
+def load_track_engine():
+    """Load track engine helpers from utils/track_engine.py."""
+    track_path = ROOT / "01_backend" / "utils" / "track_engine.py"
+    track_mod = load_module("track_engine", track_path)
+    return track_mod.analyze_query, track_mod.build_where_filter
+
+
 #sys.path.insert(0, str(MODULES / "03_normseek"))  # NormSeek ⏳
 #sys.path.insert(0, str(MODULES / "04_costseek"))  # CostSeek ⏳
 
@@ -86,6 +93,15 @@ except Exception as e:
     PARTSEEK_READY = False
     print(f"⚠️  PartSeek not available: {e}")
 
+# Track Engine — Active ✅
+try:
+    analyze_query, build_where_filter = load_track_engine()
+    TRACK_ENGINE_READY = True
+    print("✅ Track Engine loaded")
+except Exception as e:
+    TRACK_ENGINE_READY = False
+    print(f"⚠️  Track Engine not available: {e}")
+
 
 # NormSeek — Phase 2 ⏳
 NORMSEEK_READY = False
@@ -102,7 +118,7 @@ print("⏳ CostSeek not yet active — Phase 3")
 app = FastAPI(
     title="KnowSeek.Ai API",
     description="Local AI Knowledge Platform — On-Premise RAG System",
-    version="rev07_002"
+    version="rev08_001"
 )
 
 app.add_middleware(
@@ -183,10 +199,11 @@ def check_chromadb() -> dict:
 def root():
     return {
         "name":    "KnowSeek.Ai API",
-        "version": "rev07_002",
+        "version": "rev08_001",
         "modules": {
             "docseek":  "✅ active",
             "partseek": "✅ active",
+            "track_engine": "✅ active" if TRACK_ENGINE_READY else "⚠️ unavailable",
             "normseek": "⏳ Phase 2",
             "costseek": "⏳ Phase 3",
         }
@@ -208,32 +225,102 @@ def health_check():
         "modules": {
             "docseek":  DOCSEEK_READY,
             "partseek": PARTSEEK_READY,
+            "track_engine": TRACK_ENGINE_READY,
             "normseek": NORMSEEK_READY,
             "costseek": COSTSEEK_READY,
         }
     }
 
 
+# 7.2b Unified Query via Track Engine ✅
+@app.post("/api/query")
+def unified_query(request: QueryRequest):
+    """
+    Unified query endpoint.
+    Query -> Track Engine -> where_filter -> module-specific pipeline.
+    """
+    if not TRACK_ENGINE_READY:
+        raise HTTPException(status_code=503, detail="Track Engine not available")
+
+    track = analyze_query(request.question)
+    where_filter = build_where_filter(track)
+
+    print("TRACK:", track)
+    print("FILTER:", where_filter)
+
+    if track.get("missing") and track.get("module") != "partseek":
+        return {
+            "status": "incomplete",
+            "module": track.get("module"),
+            "missing": track.get("missing", []),
+            "track": track,
+        }
+
+    if track.get("module") == "partseek":
+        if not PARTSEEK_READY:
+            raise HTTPException(status_code=503, detail="PartSeek not available")
+
+        result = find_part_with_filter(
+            query=request.question,
+            oem=where_filter.get("oem_code"),
+            thread=track.get("filters", {}).get("thread"),
+            material=track.get("filters", {}).get("material"),
+            verbose=False,
+        )
+        return result
+
+    if not DOCSEEK_READY:
+        raise HTTPException(status_code=503, detail="DocSeek module not available")
+
+    result = ask_with_filter(
+        question=request.question,
+        oem_code=where_filter.get("oem_code"),
+        category=where_filter.get("category"),
+        where_filter=where_filter,
+        verbose=False,
+    )
+    return result
+
+
 # 7.3 DocSeek Query ✅
 @app.post("/api/docseek/query")
 def docseek_query(request: QueryRequest):
-    """Ask a question using RAG pipeline."""
+    """Ask a question using DocSeek pipeline with Track-first filtering."""
     if not DOCSEEK_READY:
         raise HTTPException(status_code=503, detail="DocSeek module not available")
+    if not TRACK_ENGINE_READY:
+        raise HTTPException(status_code=503, detail="Track Engine not available")
+
     try:
-        if request.oem_code or request.category:
-            result = ask_with_filter(
-                question=request.question,
-                oem_code=request.oem_code,
-                category=request.category,
-                verbose=False
-            )
-        else:
-            result = ask(
-                question=request.question,
-                n_results=request.n_results,
-                verbose=False
-            )
+        track = analyze_query(request.question)
+        where_filter = build_where_filter(track)
+
+        # Force module safety for direct DocSeek endpoint.
+        where_filter["module"] = "docseek"
+
+        # Explicit request fields override inferred filters.
+        if request.oem_code:
+            where_filter["oem_code"] = request.oem_code
+        if request.category:
+            where_filter["category"] = request.category
+
+        print("TRACK:", track)
+        print("FILTER:", where_filter)
+
+        if track.get("missing") and not (request.oem_code or request.category):
+            return {
+                "status": "incomplete",
+                "module": "docseek",
+                "missing": track.get("missing", []),
+                "track": track,
+            }
+
+        result = ask(
+            question=request.question,
+            where_filter=where_filter,
+            n_results=request.n_results,
+            verbose=False
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -259,23 +346,37 @@ def docseek_compare(request: CompareRequest):
 # 7.5 PartSeek Query ✅
 @app.post("/api/partseek/query")
 def partseek_query(request: QueryRequest):
-    """Search for parts by text query."""
+    """Search for parts with Track-first filtering."""
     if not PARTSEEK_READY:
         raise HTTPException(status_code=503, detail="PartSeek not available")
+    if not TRACK_ENGINE_READY:
+        raise HTTPException(status_code=503, detail="Track Engine not available")
+
     try:
-        if request.oem_code or request.category or request.module:
-            result = find_part_with_filter(
-                query=request.question,
-                oem_code=request.oem_code,
-                category=request.category,
-                module=request.module,
-                verbose=False
-            )
-        else:
-            result = find_part(
-                query=request.question,
-                verbose=False
-            )
+        track = analyze_query(request.question)
+        where_filter = build_where_filter(track)
+
+        # Force module safety for direct PartSeek endpoint.
+        where_filter["module"] = "partseek"
+
+        # Explicit request fields override inferred filters.
+        if request.oem_code:
+            where_filter["oem_code"] = request.oem_code
+        if request.category:
+            where_filter["category"] = request.category
+        if request.module:
+            where_filter["module"] = request.module
+
+        print("TRACK:", track)
+        print("FILTER:", where_filter)
+
+        result = find_part_with_filter(
+            query=request.question,
+            oem=where_filter.get("oem_code"),
+            thread=track.get("filters", {}).get("thread"),
+            material=track.get("filters", {}).get("material"),
+            verbose=False
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

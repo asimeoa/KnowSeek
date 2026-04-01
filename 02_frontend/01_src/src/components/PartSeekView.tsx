@@ -25,6 +25,10 @@ interface PartResult {
   page: number;
   norm: string | null;
   thread_size: string | null;
+  dim_d?: string | null;
+  dim_l?: string | null;
+  dim_dk?: string | null;
+  dim_k?: string | null;
   strength_class: string | null;
   drive_type: string | null;
   coating: string | null;
@@ -268,7 +272,13 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
   const effectiveQuery = useMemo(() => {
     if (!hasQuery) return '';
     const parts: string[] = [normalizedQuery];
-    if (selectedLeaf?.token) parts.push(selectedLeaf.token);
+    if (selectedLeaf?.token) {
+      const base = normalizedQuery.toLowerCase();
+      const token = selectedLeaf.token.toLowerCase();
+      if (!base.includes(token)) {
+        parts.push(selectedLeaf.token);
+      }
+    }
     return parts.join(' ').trim();
   }, [hasQuery, normalizedQuery, selectedLeaf]);
 
@@ -381,7 +391,9 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
       const body = {
         question: effectiveQuery,
         module: 'partseek',
-        category: getTrackCategory(selectedTrack),
+        // Keep retrieval broad for fastener/bracket and rely on track filters.
+        // Category hard-filters can remove valid candidates (e.g. M10 across mixed metadata labels).
+        category: selectedTrack === 'OEM_NORM' ? getTrackCategory(selectedTrack) : undefined,
       };
 
       fetch(`${API_URL}/api/partseek/query`, {
@@ -722,12 +734,22 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
 
                         {/* Dimensions from API data */}
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full">
-                          {part.thread_size && (
-                            <div className="flex justify-between col-span-2">
-                              <span style={{ color }}>Thread</span>
-                              <span className="text-gray-300 font-medium">{part.thread_size}</span>
-                            </div>
-                          )}
+                          <div className="flex justify-between col-span-2">
+                            <span style={{ color }}>d</span>
+                            <span className="text-gray-300 font-medium">{part.dim_d ?? part.thread_size ?? 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between col-span-2">
+                            <span style={{ color }}>l</span>
+                            <span className="text-gray-300 font-medium">{part.dim_l ?? 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between col-span-2">
+                            <span style={{ color }}>dk</span>
+                            <span className="text-gray-300 font-medium">{part.dim_dk ?? 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between col-span-2">
+                            <span style={{ color }}>k</span>
+                            <span className="text-gray-300 font-medium">{part.dim_k ?? 'N/A'}</span>
+                          </div>
                           {part.strength_class && (
                             <div className="flex justify-between col-span-2">
                               <span style={{ color }}>Class</span>
@@ -744,11 +766,6 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
                             <div className="flex justify-between col-span-2">
                               <span style={{ color }}>Coating</span>
                               <span className="text-gray-300 font-medium">{part.coating}</span>
-                            </div>
-                          )}
-                          {!part.thread_size && !part.strength_class && !part.drive_type && (
-                            <div className="col-span-2 text-center text-muted-foreground text-[9px]">
-                              See document for specs
                             </div>
                           )}
                         </div>
@@ -845,7 +862,7 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
       {/* Not found */}
       {!loading && hasQuery && apiData && !apiData.found && (
         <p className="text-center text-sm text-muted-foreground mt-8">
-          🔴 No parts found for "{effectiveQuery || normalizedQuery}" — try different search terms.
+          🔴 No parts found for "{normalizedQuery}" — try different search terms.
         </p>
       )}
 

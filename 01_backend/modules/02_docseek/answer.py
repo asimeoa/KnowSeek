@@ -5,8 +5,8 @@ Takes search results from search.py,
 sends them to llama3 via Ollama,
 returns a clean answer with source + confidence.
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev08_001 — 30.03.2026
+Branch:  main_sia09
 
 Chapters:
     1. Imports
@@ -88,16 +88,18 @@ def build_prompt(question: str, context: str) -> str:
     Build the full prompt for llama3.
     System prompt tells llama3 to act as engineering assistant.
     """
-    return f"""You are a professional engineering assistant for an automotive supplier.
+    return f"""You are an automotive specification assistant.
 
-RULES:
-- Answer based on the documents provided below.
+Instructions:
+- ONLY use the provided context
+- Identify the MOST relevant chunk
+- Ignore less relevant ones
+- If OEM is mentioned:
+  → ONLY answer for that OEM
+- Be precise, not general
+- If exact value exists → return it directly
+- If answer is not in context → say "Not found"
 - Always include the source document and page number.
-- If you find exact information — state it clearly.
-- If you find related or partial information — share it but mark it as: "Based on similar content:"
-- If truly nothing is found — say: "I could not find this information in the available documents."
-- Do not guess. Do not invent numbers.
-- Keep your answer short and technical.
 
 DOCUMENTS:
 {context}
@@ -151,6 +153,7 @@ def format_answer(question: str, answer: str, results: list[dict], elapsed_ms: f
 # 4.1 ask
 def ask(
     question: str,
+    where_filter: dict | None = None,
     n_results: int = 5,
     verbose: bool = True
 ) -> dict:
@@ -171,7 +174,12 @@ def ask(
         print(f"Searching for: {question}")
 
     # Steps 1-3 happen in search()
-    results = search(question, n_results=n_results, verbose=False)
+    results = search(
+        question,
+        where_filter=where_filter,
+        n_results=n_results,
+        verbose=False
+    )
 
     if not results:
         return {
@@ -259,6 +267,7 @@ def ask_with_filter(
     question: str,
     oem_code: str = None,
     category: str = None,
+    where_filter: dict | None = None,
     verbose: bool = True
 ) -> dict:
     """
@@ -274,6 +283,7 @@ def ask_with_filter(
         question,
         oem_code=oem_code,
         category=category,
+        where_filter=where_filter,
         verbose=False
     )
 

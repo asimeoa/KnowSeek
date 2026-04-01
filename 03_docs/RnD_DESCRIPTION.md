@@ -1,7 +1,8 @@
 # KnowSeek.ai — RnD Description
 **On-Premise AI Knowledge Platform**
 *Capstone Project — MVP Reference Document*
-*Version: rev07_002 — Last updated: 27.03.2026 21:10 — Branch: main_sia08*
+*Version: rev08_001 / rev09_Alpha*
+*Last updated: 31.03.2026 — Branch: main_sia09*
 
 > All data stays local. No cloud. No internet required.
 
@@ -223,22 +224,27 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 
 ```
 01_backend/
-├── main.py             ✅ rev07_002 — FastAPI all 4 modules (port 8001)
+├── main.py             ✅ rev08_001 — FastAPI all 4 modules (port 8001)
 ├── modules/
 │   ├── 01_partseek/
-│   │   ├── ingest.py   ✅ rev06_001 — calls DocSeek ingest pipeline
-│   │   ├── search.py   ✅ rev07_002 — filter by module="partseek"
-│   │   └── answer.py   ✅ rev07_002 — structured results + collision warning
+│   │   ├── ingest.py   ✅ rev08.001 — extract_thread/material/oem/part_type/surface_color
+│   │   ├── search.py   ✅ rev08_003 — N×4 pool + BM25 Hybrid (60/40) + Thread-Boost
+│   │   └── answer.py   ✅ rev08_001 — structured results + collision warning
 │   ├── 02_docseek/
-│   │   ├── ingest.py   ✅ rev06_001 — load, OCR, chunk, module tag, store
-│   │   ├── search.py   ✅ rev07_002 — Hybrid Search: Domain + ChromaDB + BM25
-│   │   └── answer.py   ✅ rev07_002 — RAG + Hybrid Search + OEM comparison
+│   │   ├── ingest.py   ✅ rev08_001 — load, OCR, chunk, module tag, store
+│   │   ├── search.py   ✅ rev08_001 — Track-first + Filter + Hybrid Search
+│   │   └── answer.py   ✅ rev08_001 — RAG + Hybrid Search + OEM comparison
 │   ├── 03_normseek/    ⏳ Phase 2
 │   └── 04_costseek/    ⏳ Phase 3
 └── utils/
+    ├── track_engine.py ✅ rev08_001 — analyze_query() + build_where_filter()
     ├── check_pdfs.py   ✅ rev06_001 — auto OCR check for all modules
     ├── yolo_ingest.py  ✅ rev07_001 — LLaVA + YOLO image ingestion
     └── yolo_train.py   ✅ rev07_001 — YOLO training pipeline
+
+split_gm_catalog.py     ✅ rev06_001 — GM Fastener Catalog → per-thread PDFs
+split_volvo_catalog.py  ✅ rev01_001 — Volvo Design Guidelines → per-type PDFs
+test_extraction.py      ✅ — 4-case regression test for ingest metadata extraction
 
 06_notebooks/
 └── EDA.ipynb           ✅ rev07_002 — Chapter 1-6 + Hybrid Search viz
@@ -252,6 +258,11 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 - `check_domain_relevance(query)` — domain keyword check
 - `rerank_with_bm25(query, results)` — BM25 keyword reranking
 - `run_ingest()` — full pipeline: load → chunk → vectorize → store
+- `extract_thread(text)` — M6/M8/M10/M12/M14/M16 from raw PDF text *(new rev08.001)*
+- `extract_material(text)` — Steel / Stainless Steel / Plastic / Aluminum *(new rev08.001)*
+- `extract_oem(filename, text)` — Volvo / GM / DIN / VW / BMW / Mercedes *(new rev08.001)*
+- `extract_part_type(text)` — flange_screw / bolt / nut / washer / rivet *(new rev08.001)*
+- `extract_surface_color(text)` — Black / Silver / Zinc / Blank / Natural *(new rev08.001)*
 
 > The notebook is the **window** — the .py files are the **engine**.
 
@@ -351,9 +362,10 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 | Document Type | Size | Chunk | Overlap | R/Y/G |
 |---------------|------|-------|---------|--------|
 | 1-Pager (1–2 pages) | < 1MB | 256 | 50 | 🟢 |
-| Technical sheet (5–20p) | 1–3MB | 500 | 100 | 🟢 |
-| Small Lastenheft (~50p) | ~6MB | 500 | 100 | 🟢 |
-| Large Lastenheft (~300p) | ~10MB | 1000 | 200 | 🟡 |
+| Technical sheet (DocSeek) | 1–3MB | 250 | 50 | 🟢 |
+| Table-heavy docs (DocSeek) | 1–3MB | 180 | 30 | 🟢 |
+| Long docs (DocSeek) | > 50p | 350 | 50 | 🟡 |
+| PartSeek datasheets | 1–20p | 100 | 20 | 🟢 |
 
 #### V3. Vector Database
 
@@ -460,9 +472,9 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 | Part search by text | 🟢 | Semantic search via ChromaDB ✅ |
 | Thread size detection | 🟢 | Extracted from chunk text ✅ |
 | Strength class detection | 🟢 | Extracted from chunk text ✅ |
-| Drive type detection | 🟢 | Torx, Hex, Innensechskant ✅ |
-| Coating detection | 🟢 | verzinkt, KTL, Zn ✅ |
-| Self-locking detection | 🟢 | Mikroverkapselung, Prevailing Torque ✅ |
+| Drive type detection | 🟢 | Torx, Hex, Hex socket ✅ |
+| Coating detection | 🟢 | zinc-coated, KTL, Zn ✅ |
+| Self-locking detection | 🟢 | Microencapsulation, Prevailing Torque ✅ |
 | Norm detection | 🟢 | DIN, MBN, ISO from text ✅ |
 | OEM filter | 🟢 | Filter by oem_code ✅ |
 | Team collision warning | 🟡 | MVP: basic — full Phase 2 |
@@ -492,9 +504,10 @@ All production logic lives in `.py` files. Notebooks call these files and are on
 | Document Type | Size | Chunk | Overlap | R/Y/G |
 |---------------|------|-------|---------|--------|
 | 1-Pager | < 1MB | 256 | 50 | 🟢 |
-| Technical sheet (5–20p) | 1–3MB | 500 | 100 | 🟢 |
-| Small Lastenheft (~50p) | ~6MB | 500 | 100 | 🟢 |
-| Large Lastenheft (~300p) | ~10MB | 1000 | 200 | 🟡 |
+| Technical sheet (DocSeek) | 1–3MB | 250 | 50 | 🟢 |
+| Table-heavy docs (DocSeek) | 1–3MB | 180 | 30 | 🟢 |
+| Long docs (DocSeek) | > 50p | 350 | 50 | 🟡 |
+| PartSeek datasheets | 1–20p | 100 | 20 | 🟢 |
 
 ### 9.3 Demo Scenario
 
@@ -929,6 +942,401 @@ Step 3: Final search with precise filter
 | Amber | Level 3 — specific property |
 
 **Status:** 🟡 Phase 2 — tree structure defined, frontend implementation planned for main_sia08
+
+*This document is the single source of truth for all KnowSeek.ai development.*
+*For version, revision, last updated date, and branch, see the header above.*
+
+---
+
+## 22. Retrieval Architecture v2 — Track-Driven System
+
+### Problem (rev07)
+
+The current system is **query-driven**:
+
+```
+User Query → Semantic Search → BM25 → LLM
+```
+
+Result:
+
+- Scores stuck at ~0.78–0.82 (YELLOW)
+- Answers are correct but too general
+- Retrieval space too large
+- Embedding model lacks domain precision
+
+### Solution (rev08)
+
+**Shift from Query-Driven → Filter-Driven Retrieval**
+
+```
+User Query
+  ↓
+Track Method (Query Understanding)
+  ↓
+Structured Filters (metadata)
+  ↓
+Targeted Retrieval (ChromaDB)
+  ↓
+LLM (optional, controlled)
+```
+
+### Core Principle
+
+> **The system does not search first — it understands first.**
+
+### Key Change
+
+| Before (rev07) | After (rev08) |
+| --- | --- |
+| Query → Search | Query → Track → Filter → Search |
+| Embedding decides | User + Track decide |
+| Large search space | Narrow search space |
+| LLM guesses | LLM confirms |
+
+---
+
+## 23. Track Method — System Upgrade
+
+### Previous Role (rev07)
+
+- UI feature
+- Post-filter
+- Optional refinement
+
+### New Role (rev08)
+
+> **Primary Query Control Layer**
+
+### Technical Redefinition
+
+```
+Track System = Query Interpreter
+```
+
+### New Flow
+
+```
+Step 1 — Analyze Query
+  → detect known entities (M8, Torx, OEM-G, etc.)
+
+Step 2 — Identify missing dimensions
+  → generate Track options
+
+Step 3 — User selects Tracks
+  → build structured filter
+
+Step 4 — Execute search with filter
+```
+
+### Critical Rule
+
+> Tracks MUST generate **metadata filters**, NOT text queries
+
+### Example
+
+User: `salt spray test`
+
+Track result:
+```
+Topic → Corrosion
+OEM → OEM-G
+Intent → Requirement
+```
+
+Final query:
+```python
+where = {
+  "module": "docseek",
+  "category": "Corrosion",
+  "oem_code": "OEM-G"
+}
+```
+
+---
+
+## 24. Dual Pipeline Strategy (DocSeek vs PartSeek)
+
+### Problem (rev07)
+
+Both modules use the same RAG pipeline despite fundamentally different data.
+
+### Solution (rev08)
+
+#### DocSeek Pipeline (Semantic + RAG)
+
+```
+Track → Filter → Semantic Search → LLM
+```
+
+Used for: long documents, specifications, comparisons
+
+#### PartSeek Pipeline (Structured Retrieval)
+
+```
+Track → Filter → Direct Retrieval
+```
+
+NO LLM. NO Semantic search (optional fallback only).
+
+Used for: parts, tables, structured attributes
+
+### Decision Table
+
+| Module | Retrieval Type | LLM |
+| --- | --- | --- |
+| DocSeek | Semantic + Filter | ✅ |
+| PartSeek | Structured Filter | ❌ (default) |
+
+---
+
+## 25. Query Lifecycle (rev08)
+
+```
+User Query
+  ↓
+Track Analysis Layer
+  ↓
+Is query complete?
+  ↓
+NO → Ask user (Track UI)
+YES
+  ↓
+Build Filter Object
+  ↓
+Select Pipeline
+  ↓
+Execute Retrieval
+  ↓
+Optional LLM
+  ↓
+Return Result + Score
+```
+
+---
+
+## 26. ChromaDB Usage — New Rules (rev08)
+
+### Before (rev07)
+
+```
+Full collection search → filter later
+```
+
+### After (rev08)
+
+```
+Apply metadata filter FIRST
+→ THEN semantic search
+```
+
+### Example
+
+```python
+collection.query(
+    query_embeddings=[embedding],
+    where={
+        "module": "docseek",
+        "category": "Corrosion",
+        "oem_code": "OEM-G"
+    },
+    n_results=5
+)
+```
+
+### Expected Impact
+
+| Metric | Before | After |
+| --- | --- | --- |
+| Score | ~0.80 | >0.90 |
+| Precision | Medium | High |
+| LLM hallucination | Medium | Low |
+
+---
+
+## 27. LLM Usage Strategy (rev08)
+
+### Problem (rev07)
+
+LLM answers from first chunk → ignores better matches
+
+### New Rules
+
+1. LLM receives **ranked + filtered chunks**
+2. Prompt forces: use BEST matching chunk, compare if multiple sources exist
+3. Max context remains small (3–5 chunks)
+
+### Future (optional)
+
+- Cross-Encoder reranking (Phase 2)
+- MMR for diversity
+
+---
+
+## 28. Chunking Strategy — Revision (rev08)
+
+### Problem
+
+- 500 tokens too large
+- Low chunk count → low precision
+
+### Implemented (main_sia09)
+
+| Type | Chunk Size | Overlap |
+| --- | --- | --- |
+| Technical specs (DocSeek) | 250 | 50 |
+| Tables (DocSeek) | 180 | 30 |
+| Long docs (DocSeek) | 350 | 50 |
+| PartSeek datasheets | 100 | 20 |
+
+### A/B Result (PartSeek)
+
+| Profile | PartSeek chunks | Avg top-1 score |
+| --- | --- | --- |
+| 120/20 | 105 | 0.9231 |
+| **100/20** | **126** | **0.9256** |
+
+Winner: **100/20** (higher chunk granularity + slightly better top-1 score)
+
+### Goal
+
+> Increase chunk count + apply Track/metadata filters → increase retrieval precision
+
+---
+
+## 29. Embedding Strategy — Future Improvement
+
+### Current
+
+- nomic-embed-text (general model)
+
+### Issue
+
+- No automotive understanding
+- Weak semantic separation
+
+### Options (Phase 2)
+
+- Domain-specific embeddings
+- Fine-tuned model
+- Hybrid keyword-heavy retrieval
+
+---
+
+## 30. Track → Filter Engine (NEW CORE COMPONENT)
+
+### New Component Required
+
+```
+/utils/track_engine.py
+```
+
+### Responsibilities
+
+- Parse query
+- Detect known attributes
+- Generate track state
+- Build filter object
+
+### Output Example
+
+```python
+{
+  "module": "partseek",
+  "filters": {
+    "thread": "M8",
+    "drive": "Torx",
+    "coating": "zinc"
+  },
+  "missing": ["strength"]
+}
+```
+
+---
+
+## 31. System Transformation Summary
+
+### rev07
+
+```
+Search System
+```
+
+### rev08
+
+```
+Decision + Retrieval System
+```
+
+### Final Principle
+
+> **Precision is not created by better models —
+> it is created by better query structure.**
+
+---
+
+**Status rev08_001:**
+� Track Engine + Pipeline Refactor implemented — Branch main_sia09
+🟢 Chunking fine-tuning completed (DocSeek + PartSeek profiles)
+🟢 ChromaDB re-ingested — 293 chunks total
+
+---
+
+## 32. Short-Term Precision Roadmap (Final Sprint to 02.04.)
+
+To fix the “AI number-blindness” (mixing up M6 vs M8), the retrieval core was expanded in two steps:
+
+### 32.1 rev08.001 — The "Survival" Update (Stabilization, **✅ DONE 31.03.2026**)
+**Focus:** Elimination of "Zero-Result-Errors" and "Top-5-Trap".
+
+* **Over-Retrieval (N×4):** The first ChromaDB query is expanded from 5 to N×4 results. This makes sure exact matches (e.g. M8) are included — even if the embedding model ranks them at position 20. Implemented in `search.py` rev08_003.
+* **BM25 Hybrid Scoring (60/40):** Combines Semantic Score (60%) + normalized BM25 Score (40%). Exact keyword matches (e.g. "M10") win over semantic noise.
+* **Thread-Boost (×1.5):** If the query contains a thread token (M6–M20), chunks whose stored `thread` metadata field matches get a ×1.5 score multiplier.
+* **Metadata-Pass Extension:** Full rewrite of `ingest.py` (rev08.001) with `extract_thread`, `extract_material`, `extract_oem`, `extract_part_type`, `extract_surface_color`. All fields are extracted from the PDF text at ingest time and stored as ChromaDB metadata.
+* **Catalog Splitter:** `split_gm_catalog.py` and `split_volvo_catalog.py` for structured splitting of OEM catalogs by thread size / part type. Enables easy re-ingest.
+* **Extraction Regression Tests:** `test_extraction.py` with 4 test cases (Volvo / DIN / GM / Stainless Steel) as automated quality checks.
+
+### 32.2 rev09 — The "Precision" Update (Expert Knowledge)
+**Focus:** Solving deep engineering queries (Hydrogen, Shear Force, Self-tapping).
+
+* **Keyword-Boosting (Hybrid Anchor):** Priority logic for critical technical terms. If the query contains terms like *"hydrogen embrittlement"* or *"self-tapping"*, chunks with exact text matches are pushed up in the ranking (+0.2 score bonus).
+* **Semantic Re-Ranking:** Combination of BM25 (keyword) and vector search to make sure engineering facts win over vector similarity.
+* **Confidence Calibration:** Traffic light adjustment (🟢🟡🔴). Expert answers are automatically marked YELLOW when the model is uncertain — this guarantees reliability for engineers.
+
+---
+
+## 33. Comparison: Standard RAG vs. KnowSeek Hybrid (rev09)
+
+| Feature | Standard RAG (Vector) | KnowSeek Hybrid (rev08_003 / rev09) | Benefit |
+|:---|:---:|:---:|:---|
+| **Number Precision** | 🔴 Low (M6 vs M8) | 🟢 High (Metadata Filter + Thread-Boost) | No wrong orders |
+| **Technical Terms** | 🟡 Medium | 🟢 High (Booster rev09) | Finds expert knowledge |
+| **Search Depth** | 🔴 Top 5 only | 🟢 Top N×4 (deep search) | Higher hit rate |
+| **Metadata Quality** | 🔴 None | 🟢 Thread / Material / OEM extracted | Filter on real fields |
+| **Offline Security** | 🟢 100% | 🟢 100% | Full data ownership |
+
+---
+
+## 34. Final Sprint Schedule (Status 31.03.2026)
+
+| Milestone | Status | Deliverable |
+|:---|:---:|:---|
+| **Stabilize Retrieval (rev08.001)** | ✅ DONE | N×4 Pool + BM25 Hybrid + Thread-Boost + Metadata Extraction |
+| **Data Pipeline (Catalogs)** | ✅ DONE | GM + Volvo PDF Splitter + Extraction Tests |
+| **Expert Keyword Booster (rev09)** | 🔜 01.04. | Keyword booster logic in `search.py` |
+| **Confidence Calibration (rev09)** | 🔜 01.04. | Confidence calibration in `answer.py` |
+| **Stakeholder Presentation** | 🔜 02.04. | Live Demo & Final PPT |
+
+---
+
+## 35. PPT Structure - Key Arguments for 02.04.
+
+1.  **Challenge:** Standard AI (Vector Search) is "number-blind" (M6 vs. M8).
+2.  **Solution:** KnowSeek Track-Method & Hybrid Precision (Metadata Filter + BM25 + Thread-Boost).
+3.  **Data Quality:** Structured metadata (thread, material, OEM) extracted at ingest — no guessing at query time.
+4.  **Efficiency:** **€208,000 annual loss** transformed into value.
+5.  **ROI:** Break-even within 12 months.
+6.  **Product Safety:** Securing our budget and our products.
 
 *This document is the single source of truth for all KnowSeek.ai development.*
 *For version, revision, last updated date, and branch, see the header above.*

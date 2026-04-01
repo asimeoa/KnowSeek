@@ -1,36 +1,21 @@
-
-
 """
 answer.py — KnowSeek.Ai — PartSeek Module
 ─────────────────────────────────────────
 Returns structured part results.
 No LLM needed — direct metadata display.
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
-
-Chapters:
-    1. Imports
-    2. Config
-    3. Helper Functions
-        3.1 format_answer()
-        3.2 check_collision()
-    4. Main Functions
-        4.1 find_part()
-        4.2 find_part_with_filter()
-    5. Run
+Version: rev08_004 — 01.04.2026
+Branch:  main_sia09
 """
 
 # ─────────────────────────────────────────────────────
 # 1. IMPORTS
 # ─────────────────────────────────────────────────────
 
-import sys
 import time
 import importlib.util
 from pathlib import Path
 
-import importlib.util
 partseek_search_path = Path(__file__).resolve().parent / "search.py"
 spec = importlib.util.spec_from_file_location("partseek_search", partseek_search_path)
 search_module = importlib.util.module_from_spec(spec)
@@ -43,19 +28,24 @@ search_part_with_filter = search_module.search_part_with_filter
 # 2. CONFIG
 # ─────────────────────────────────────────────────────
 
-COLLISION_THRESHOLD = 0.85   # Score above this = possible duplicate part
+COLLISION_THRESHOLD = 0.85
+
+
+def _na(value) -> str:
+    """Return readable placeholder for missing metadata."""
+    if value is None or value == "N/A":
+        return "N/A"
+    if isinstance(value, str) and not value.strip():
+        return "N/A"
+    return str(value)
 
 
 # ─────────────────────────────────────────────────────
 # 3. HELPER FUNCTIONS
 # ─────────────────────────────────────────────────────
 
-# 3.1 format_answer
 def format_answer(query: str, results: list[dict], elapsed_ms: float) -> dict:
-    """
-    Format PartSeek results into clean response.
-    No LLM — direct structured data.
-    """
+    """Format PartSeek results into clean response."""
     if not results:
         return {
             "query":   query,
@@ -78,16 +68,8 @@ def format_answer(query: str, results: list[dict], elapsed_ms: float) -> dict:
     }
 
 
-# 3.2 check_collision
 def check_collision(results: list[dict]) -> dict:
-    """
-    Check if a similar part already exists.
-    Returns warning if score > COLLISION_THRESHOLD.
-
-    This is the Team Collision Warning feature:
-    "A colleague recently searched for a similar part."
-    Goal: Reduce part variety, encourage standardization.
-    """
+    """Check if similar part exists (collision warning)."""
     if not results:
         return {"collision": False}
 
@@ -95,9 +77,9 @@ def check_collision(results: list[dict]) -> dict:
     if top["score"] >= COLLISION_THRESHOLD:
         return {
             "collision": True,
-            "message":   "⚠️ A similar part already exists. Check before creating a new one.",
+            "message":   "⚠️ A similar part already exists. Check before creating new one.",
             "score":     top["score"],
-            "oem_code":  top["oem_code"],
+            "oem":       top.get("oem", "N/A"),
         }
     return {"collision": False}
 
@@ -106,18 +88,16 @@ def check_collision(results: list[dict]) -> dict:
 # 4. MAIN FUNCTIONS
 # ─────────────────────────────────────────────────────
 
-# 4.1 find_part
 def find_part(
     query: str,
     verbose: bool = True
 ) -> dict:
     """
-    Find parts matching the query.
-    Returns structured list — no LLM.
-
+    Find parts matching query.
+    
     Usage:
-        result = find_part("M8 Torx screw 10.9")
-        result = find_part("Flanschschraube verzinkt")
+        result = find_part("M8 Torx screw steel")
+        result = find_part("Flanschschraube M10")
     """
     start   = time.time()
     results = search_part(query, verbose=False)
@@ -134,13 +114,12 @@ def find_part(
 
         for r in results:
             icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
-            print(f"  {icon} Score: {r['score']:.3f} — OEM: {r['oem_code']} ({r['oem_real'] or '?'})")
-            if r["thread_size"]:    print(f"     Thread:        {r['thread_size']}")
-            if r["strength_class"]: print(f"     Strength:      {r['strength_class']}")
-            if r["drive_type"]:     print(f"     Drive:         {r['drive_type']}")
-            if r["coating"]:        print(f"     Coating:       {r['coating']}")
-            if r["norm"]:           print(f"     Norm:          {r['norm']}")
-            if r["self_locking"]:   print(f"     Self-locking:  Yes")
+            print(f"  {icon} Score: {r['score']:.3f} — OEM: {_na(r.get('oem'))}")
+            print(f"     Thread:   {_na(r.get('thread'))}")
+            print(f"     Material: {_na(r.get('material'))}")
+            print(f"     Type:     {_na(r.get('part_type'))}")
+            print(f"     Surface:  {_na(r.get('surface_color'))}")
+            print(f"     Length:   {_na(r.get('length'))} mm")
             print()
 
         if collision["collision"]:
@@ -149,29 +128,30 @@ def find_part(
     return {**answer, "collision": collision}
 
 
-# 4.2 find_part_with_filter
 def find_part_with_filter(
     query: str,
-    oem_code: str = None,
-    thread_size: str = None,
+    oem: str = None,
+    thread: str = None,
+    material: str = None,
     category: str = None,
     module: str = None,
+    where_filter: dict | None = None,
+    track_filters: dict | None = None,
     verbose: bool = True
 ) -> dict:
     """
-    Find parts with specific filters.
-
+    Find parts with filters.
+    
     Usage:
-        result = find_part_with_filter("screw", oem_code="OEM-V")
-        result = find_part_with_filter("coating", thread_size="M8")
+        result = find_part_with_filter("screw", oem="Volvo")
+        result = find_part_with_filter("bolt", thread="M8", material="Steel")
     """
     start   = time.time()
     results = search_part_with_filter(
         query,
-        oem_code=oem_code,
-        thread_size=thread_size,
-        category=category,
-        module=module,
+        thread=thread,
+        oem=oem,
+        material=material,
         verbose=False
     )
     elapsed = round((time.time() - start) * 1000, 1)
@@ -181,17 +161,15 @@ def find_part_with_filter(
 
     if verbose:
         print(f"Query:    {query}")
-        print(
-            f"Filter:   module={module or 'partseek'} "
-            f"oem={oem_code or 'all'} category={category or 'all'} thread={thread_size or 'all'}"
-        )
+        print(f"Filter:   thread={thread or 'all'} oem={oem or 'all'} material={material or 'all'}")
         print(f"Found:    {len(results)} parts")
         print(f"Time:     {elapsed}ms")
         print()
 
         for r in results:
             icon = {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(r["signal"], "⚪")
-            print(f"  {icon} {r['oem_code']} | {r['thread_size']} | {r['strength_class']} | {r['drive_type']}")
+            print(f"  {icon} {r.get('oem')} | {r.get('thread')} | {r.get('material')} | {r.get('part_type')}")
+            print()
 
         if collision["collision"]:
             print(collision["message"])
@@ -204,18 +182,18 @@ def find_part_with_filter(
 # ─────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-
+    
     print("=" * 50)
     print("TEST 1 — Find Part")
     print("=" * 50)
-    result = find_part("M8 Torx screw steel 10.9")
-
+    result = find_part("M8 Torx screw steel")
+    
     print("=" * 50)
-    print("TEST 2 — Find with OEM Filter")
+    print("TEST 2 — Find with Filter")
     print("=" * 50)
-    result = find_part_with_filter("flange screw", oem_code="OEM-V")
-
+    result = find_part_with_filter("screw", thread="M8")
+    
     print("=" * 50)
-    print("TEST 3 — Collision Check")
+    print("TEST 3 — OEM Filter")
     print("=" * 50)
-    result = find_part("DIN 34802 screw")
+    result = find_part_with_filter("bolt", oem="Volvo")

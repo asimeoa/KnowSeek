@@ -5,8 +5,8 @@ ingest.py — KnowSeek.Ai — DocSeek Module
 Loads PDF files, splits them into chunks,
 adds metadata, and stores everything in ChromaDB.
 
-Version: rev06_001 — 25.03.2026 00:15
-Branch:  main_sia07
+Version: rev08_001 — 30.03.2026
+Branch:  main_sia09
 
 Chapters:
     1. Imports
@@ -49,12 +49,19 @@ from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 # ─────────────────────────────────────────────────────
 
 CHUNK_CONFIGS = {
-    "small":  {"chunk_size": 400,  "chunk_overlap": 50},   # Experiment 1
-    "medium": {"chunk_size": 500,  "chunk_overlap": 100},  # Experiment 2 — Default
-    "large":  {"chunk_size": 1000, "chunk_overlap": 200},  # Experiment 3
+    # DocSeek profiles
+    "docseek_small":  {"chunk_size": 256, "chunk_overlap": 50},
+    "docseek_medium": {"chunk_size": 220, "chunk_overlap": 40},   # tuned for higher chunk density
+    "docseek_table":  {"chunk_size": 180, "chunk_overlap": 30},
+    "docseek_large":  {"chunk_size": 350, "chunk_overlap": 50},
+
+    # PartSeek profiles (A/B tuning)
+    "partseek_120":   {"chunk_size": 120, "chunk_overlap": 20},
+    "partseek_100":   {"chunk_size": 100, "chunk_overlap": 20},
 }
 
-DEFAULT_CONFIG    = "medium"
+DEFAULT_CONFIG    = "auto"
+PARTSEEK_DEFAULT_PROFILE = "partseek_100"
 COLLECTION_NAME   = "knowseek"   # ONE collection for all modules
 
 # Auto-detect paths — works from anywhere
@@ -168,14 +175,41 @@ def get_doc_type(pages: int) -> str:
 
 
 # 4.5 get_chunk_config
-def get_chunk_config(pages: int) -> dict:
-    """Select chunk config based on document size."""
+def choose_chunk_profile(
+    filename: str,
+    category: str,
+    pages: int,
+    config_name: str,
+    partseek_profile: str = PARTSEEK_DEFAULT_PROFILE,
+) -> tuple[str, dict]:
+    """
+    Select chunk profile.
+    - auto: per-module/per-document strategy
+    - explicit config_name: force profile from CHUNK_CONFIGS
+    """
+    if config_name != "auto":
+        if config_name not in CHUNK_CONFIGS:
+            raise ValueError(f"Unknown chunk config: {config_name}")
+        return config_name, CHUNK_CONFIGS[config_name]
+
+    # PartSeek prefers very small deterministic chunks.
+    if category in PART_CATEGORIES:
+        profile = partseek_profile
+        if profile not in CHUNK_CONFIGS:
+            raise ValueError(f"Unknown partseek profile: {profile}")
+        return profile, CHUNK_CONFIGS[profile]
+
+    # DocSeek table-like docs benefit from smaller chunks and lower overlap.
+    name_low = filename.lower()
+    if any(k in name_low for k in ["table", "tabelle", "matrix", "list"]):
+        return "docseek_table", CHUNK_CONFIGS["docseek_table"]
+
+    # DocSeek general profiles by size.
     if pages <= 2:
-        return CHUNK_CONFIGS["small"]
-    elif pages <= 50:
-        return CHUNK_CONFIGS["medium"]
-    else:
-        return CHUNK_CONFIGS["large"]
+        return "docseek_small", CHUNK_CONFIGS["docseek_small"]
+    if pages <= 50:
+        return "docseek_medium", CHUNK_CONFIGS["docseek_medium"]
+    return "docseek_large", CHUNK_CONFIGS["docseek_large"]
 
 
 # 4.6 make_source_id
@@ -277,6 +311,7 @@ def build_metadata(filename: str, page: int, chunk_index: int,
 def load_and_chunk(
     data_path: Path = DATA_PATH,
     config_name: str = DEFAULT_CONFIG,
+    partseek_profile: str = PARTSEEK_DEFAULT_PROFILE,
     verbose: bool = True
 ) -> tuple[list[dict], list[dict]]:
     """
@@ -287,13 +322,16 @@ def load_and_chunk(
         chunks, skipped = load_and_chunk()
         chunks, skipped = load_and_chunk(config_name="large")
     """
-    config     = CHUNK_CONFIGS[config_name]
     all_chunks = []
     skipped    = []
     pdf_files  = list(data_path.rglob("*.pdf"))
 
     if verbose:
-        print(f"Config:     {config_name} — chunk={config['chunk_size']} overlap={config['chunk_overlap']}")
+        if config_name == "auto":
+            print("Config:     auto (DocSeek/PartSeek profiles)")
+        else:
+            forced = CHUNK_CONFIGS[config_name]
+            print(f"Config:     {config_name} — chunk={forced['chunk_size']} overlap={forced['chunk_overlap']}")
         print(f"PDFs found: {len(pdf_files)}")
         print()
 
@@ -308,7 +346,15 @@ def load_and_chunk(
             continue
 
         total_pages = len(pages)
-        chunks      = chunk_pages(pages, config)
+        category = get_category(pdf_path.name)
+        profile_name, profile_config = choose_chunk_profile(
+            filename=pdf_path.name,
+            category=category,
+            pages=total_pages,
+            config_name=config_name,
+            partseek_profile=partseek_profile,
+        )
+        chunks = chunk_pages(pages, profile_config)
 
         for chunk in chunks:
             metadata = build_metadata(
@@ -316,7 +362,7 @@ def load_and_chunk(
                 page=chunk["page"],
                 chunk_index=chunk["chunk_index"],
                 total_pages=total_pages,
-                config_name=config_name,
+                config_name=profile_name,
                 text=chunk["text"]
             )
             all_chunks.append({
@@ -325,7 +371,10 @@ def load_and_chunk(
             })
 
         if verbose:
-            print(f"    Pages: {total_pages} — Chunks: {len(chunks)}")
+            print(
+                f"    Pages: {total_pages} — Chunks: {len(chunks)} "
+                f"— Profile: {profile_name}"
+            )
 
     # Find all unsupported files
     supported = [".pdf", ".docx", ".xlsx", ".png", ".webp", ".jpg"]
@@ -397,6 +446,7 @@ def store_in_chromadb(
 def run_ingest(
     data_path: Path = DATA_PATH,
     config_name: str = DEFAULT_CONFIG,
+    partseek_profile: str = PARTSEEK_DEFAULT_PROFILE,
     collection_name: str = COLLECTION_NAME
 ) -> dict:
     """
@@ -411,6 +461,7 @@ def run_ingest(
     chunks, skipped = load_and_chunk(
         data_path=data_path,
         config_name=config_name,
+        partseek_profile=partseek_profile,
         verbose=False
     )
     store_in_chromadb(
@@ -419,7 +470,7 @@ def run_ingest(
         verbose=False
     )
     elapsed = round(time.time() - start, 2)
-    config  = CHUNK_CONFIGS[config_name]
+    config = CHUNK_CONFIGS.get(config_name)
 
     # Count by module
     docseek_count  = sum(1 for c in chunks if c["metadata"].get("module") == "docseek")
@@ -427,8 +478,9 @@ def run_ingest(
 
     summary = {
         "config_name":    config_name,
-        "chunk_size":     config["chunk_size"],
-        "chunk_overlap":  config["chunk_overlap"],
+        "partseek_profile": partseek_profile,
+        "chunk_size":     config["chunk_size"] if config else "auto",
+        "chunk_overlap":  config["chunk_overlap"] if config else "auto",
         "total_chunks":   len(chunks),
         "docseek_chunks": docseek_count,
         "partseek_chunks": partseek_count,

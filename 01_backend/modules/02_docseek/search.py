@@ -4,8 +4,8 @@ search.py — KnowSeek.Ai — DocSeek Module
 Searches ChromaDB for relevant chunks.
 Returns results with confidence score 🟢🟡🔴
 
-Version: rev07_002 — 27.03.2026 21:10
-Branch:  main_sia08
+Version: rev08_001 — 30.03.2026
+Branch:  main_sia09
 
 Chapters:
     1. Imports
@@ -147,6 +147,21 @@ def check_domain_relevance(query: str) -> bool:
     return any(kw in query_lower for kw in DOMAIN_KEYWORDS)
 
 
+def build_chroma_where(where_filter: dict | None, module: str) -> dict:
+    """Build valid Chroma where filter with a single top-level operator."""
+    if not where_filter:
+        return {"module": module}
+
+    where = dict(where_filter)
+    where["module"] = module
+
+    if "$and" in where or "$or" in where:
+        return where
+    if len(where) == 1:
+        return where
+    return {"$and": [{k: v} for k, v in where.items()]}
+
+
 # 3.4 rerank_with_bm25
 def rerank_with_bm25(query: str, results: list[dict]) -> list[dict]:
     """
@@ -216,6 +231,7 @@ def get_collection(
 # 4.2 search
 def search(
     query: str,
+    where_filter: dict | None = None,
     n_results: int = N_RESULTS,
     verbose: bool = True
 ) -> list[dict]:
@@ -258,10 +274,12 @@ def search(
 
     # Step 2 — ChromaDB Semantic Search
     collection = get_collection()
+    base_where = build_chroma_where(where_filter, MODULE)
+
     raw = collection.query(
         query_texts=[query],
         n_results=n_results,
-        where={"module": MODULE},
+        where=base_where,
         include=["documents", "metadatas", "distances"]
     )
 
@@ -298,6 +316,7 @@ def search_with_filter(
     query: str,
     oem_code: str = None,
     category: str = None,
+    where_filter: dict | None = None,
     n_results: int = N_RESULTS,
     verbose: bool = True
 ) -> list[dict]:
@@ -319,13 +338,16 @@ def search_with_filter(
     # Step 2 — ChromaDB with filters
     collection = get_collection()
 
-    where = {"module": MODULE}
-    if oem_code and category:
-        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}, {"category": category}]}
-    elif oem_code:
-        where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}]}
-    elif category:
-        where = {"$and": [{"module": MODULE}, {"category": category}]}
+    if where_filter:
+        where = build_chroma_where(where_filter, MODULE)
+    else:
+        where = {"module": MODULE}
+        if oem_code and category:
+            where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}, {"category": category}]}
+        elif oem_code:
+            where = {"$and": [{"module": MODULE}, {"oem_code": oem_code}]}
+        elif category:
+            where = {"$and": [{"module": MODULE}, {"category": category}]}
 
     start = time.time()
     raw   = collection.query(
