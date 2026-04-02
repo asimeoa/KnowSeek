@@ -19,19 +19,22 @@ from pathlib import Path
 from typing import Dict, Optional
 import pdfplumber
 import chromadb
-from sentence_transformers import SentenceTransformer
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 
 # ─────────────────────────────────────────────────────
 # CONFIG
 # ─────────────────────────────────────────────────────
 
-BASE_PATH = Path("/Users/asimeoa/aipm-1711/KnowSeek")
+BASE_PATH = Path(__file__).resolve().parents[3]
 DATA_PATH = BASE_PATH / "05_data" / "01_Fasteners"
 CHROMA_PATH = BASE_PATH / "chroma_db"
 COLLECTION_NAME = "knowseek"
 
-# Embedding Model
-MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+# Embedding Model — same as DocSeek (768D, nomic-embed-text via Ollama)
+EMBED_FN = OllamaEmbeddingFunction(
+    model_name="nomic-embed-text",
+    url="http://localhost:11434/api/embeddings",
+)
 
 
 # ─────────────────────────────────────────────────────
@@ -305,44 +308,42 @@ def ingest_to_chromadb(data: list):
     
     # Initialize ChromaDB
     client = chromadb.PersistentClient(path=str(CHROMA_PATH))
-    
-    # Get or create collection
+
+    # Get or create collection — use same embedding function as DocSeek
     try:
-        collection = client.get_collection(COLLECTION_NAME)
+        collection = client.get_collection(COLLECTION_NAME, embedding_function=EMBED_FN)
         print(f"  Using existing collection: {COLLECTION_NAME}")
-    except:
-        collection = client.create_collection(COLLECTION_NAME)
+    except Exception:
+        collection = client.create_collection(COLLECTION_NAME, embedding_function=EMBED_FN)
         print(f"  Created new collection: {COLLECTION_NAME}")
-    
+
+    # Delete existing partseek chunks so we can re-add cleanly
+    existing = collection.get(where={"module": "partseek"})
+    if existing["ids"]:
+        collection.delete(ids=existing["ids"])
+        print(f"  Removed {len(existing['ids'])} old partseek chunks")
+
     # Prepare batches
-    batch_size = 100
+    batch_size = 50
     total = len(data)
-    
+
     for i in range(0, total, batch_size):
         batch = data[i:i + batch_size]
-        
-        # Extract components
-        texts = [item[0] for item in batch]
+
+        texts     = [item[0] for item in batch]
         metadatas = [item[1] for item in batch]
-        
-        # Generate embeddings
-        embeddings = MODEL.encode(texts).tolist()
-        
-        # Generate IDs
-        ids = [f"partseek_{i + j:06d}" for j in range(len(batch))]
-        
-        # Add to collection
+        ids       = [f"partseek_{i + j:06d}" for j in range(len(batch))]
+
         collection.add(
             ids=ids,
-            embeddings=embeddings,
             documents=texts,
             metadatas=metadatas
         )
-        
+
         print(f"  Ingested {i + len(batch)}/{total} chunks", end='\r')
-    
+
     print(f"\n  ✅ Ingested {total} chunks")
-    
+
     return collection
 
 
@@ -404,6 +405,35 @@ def main():
     print("  3. Test query: curl http://localhost:8001/api/partseek/query \\")
     print("                      -d '{\"question\": \"M10 screw\"}'")
     print()
+
+
+def run_partseek_ingest(partseek_profile: str = "partseek_100") -> dict:
+    """
+    Wrapper called from EDA notebook.
+    Runs the full ingest and returns a summary dict.
+    """
+    if not DATA_PATH.exists():
+        return {"error": f"Data directory not found: {DATA_PATH}"}
+
+    pdfs = sorted(DATA_PATH.glob("*.pdf"))
+    all_data = []
+    for pdf_path in pdfs:
+        all_data.extend(process_pdf(pdf_path))
+
+    collection = ingest_to_chromadb(all_data)
+
+    profile_counts: dict = {}
+    for _, meta in all_data:
+        p = meta.get("chunk_config", "unknown")
+        profile_counts[p] = profile_counts.get(p, 0) + 1
+
+    return {
+        "partseek_profile":    partseek_profile,
+        "partseek_chunks":     len(all_data),
+        "total_chunks":        collection.count(),
+        "total_docs":          len(pdfs),
+        "chunk_profile_counts": profile_counts,
+    }
 
 
 if __name__ == "__main__":

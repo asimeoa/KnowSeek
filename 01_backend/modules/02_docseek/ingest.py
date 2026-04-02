@@ -75,12 +75,14 @@ DATA_PATH = BASE_PATH / "05_data"
 # ─────────────────────────────────────────────────────
 
 OEM_MAP = {
-    "GEORGE": "OEM-G",   # Mercedes-Benz — US Presidents theme
-    "MICKEY": "OEM-M",   # GM            — Disney theme
-    "ZEUS":   "OEM-Z",   # Volvo         — Greek Gods theme
-    "HADES":  "OEM-H",   # Volvo         — Greek Gods theme
-    "SWIFT":  "OEM-S",   # China/Internal — Musicians theme
-    "MBN":    "OEM-B",   # Mercedes-Benz Norm
+    "VOLVO":  "Volvo",
+    "VCS":    "Volvo",
+    "GM":     "GM",
+    "MBN":    "MB",
+    "DIN":    "DIN",
+    "VW":     "VW",
+    "FORD":   "Ford",
+    "CHINA":  "China",
 }
 
 CATEGORY_MAP = {
@@ -88,6 +90,10 @@ CATEGORY_MAP = {
     "mbn":       "OEM-Fastener",
     "din":       "OEM-Fastener",
     "iso":       "OEM-Fastener",
+    "gm":        "OEM-Fastener",
+    "volvo":     "OEM-Fastener",
+    "vw":        "OEM-Fastener",
+    "ford":      "OEM-Fastener",
 
     # Supplier Fastener Datasheets — parts from suppliers
     "screw":     "Supplier-Fastener",
@@ -407,14 +413,18 @@ def store_in_chromadb(
         collection = store_in_chromadb(chunks)
     """
     Path(db_path).mkdir(exist_ok=True)
-    client = chromadb.PersistentClient(path=db_path)
 
+    # Delete old collection
     try:
-        client.delete_collection(collection_name)
+        _del_client = chromadb.PersistentClient(path=db_path)
+        _del_client.delete_collection(collection_name)
         if verbose:
             print(f"Collection '{collection_name}' deleted — starting fresh")
     except Exception:
         pass
+
+    # Re-open client so internal UUID cache is clean
+    client = chromadb.PersistentClient(path=db_path)
 
     ollama_ef = OllamaEmbeddingFunction(
         url="http://localhost:11434/api/embeddings",

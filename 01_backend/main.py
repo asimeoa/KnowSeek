@@ -307,14 +307,6 @@ def docseek_query(request: QueryRequest):
         print("TRACK:", track)
         print("FILTER:", where_filter)
 
-        if track.get("missing") and not (request.oem_code or request.category):
-            return {
-                "status": "incomplete",
-                "module": "docseek",
-                "missing": track.get("missing", []),
-                "track": track,
-            }
-
         result = ask(
             question=request.question,
             where_filter=where_filter,
@@ -373,8 +365,6 @@ def partseek_query(request: QueryRequest):
         result = find_part_with_filter(
             query=request.question,
             oem=where_filter.get("oem_code"),
-            thread=track.get("filters", {}).get("thread"),
-            material=track.get("filters", {}).get("material"),
             verbose=False
         )
         return result

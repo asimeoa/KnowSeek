@@ -4,10 +4,10 @@
  * Shows search results with confidence scores
  * Connected to real backend API
  *
- * Version: rev09.001
+ * Version: rev09_001
  * Branch:  main_sia10
- * Date:    01.04.2026 01:10
- * Status:  Connected to real API - NO MOCK DATA
+ * Date:    01.04.2026 14:42
+ * Status:  Connected to real API - with real data.  
  */
 
 import React, { useMemo, useState } from 'react';
@@ -16,11 +16,9 @@ import { Upload, Loader2 } from 'lucide-react';
 import ScrewSketch from './ScrewSketch';
 
 interface PartResult {
-  rank: number;
+  rank?: number;
   score: number;
   signal: string;
-  text?: string;
-  // New structured fields
   name?: string;
   part_number?: string;
   revision?: string;
@@ -29,37 +27,33 @@ interface PartResult {
   surface?: string;
   fa_max?: string;
   fr_max?: string;
-  dims?: { D?: string; Dk?: string; l?: string; k?: string };
+  dims?: {
+    D?: string;
+    Dk?: string;
+    l?: string;
+    k?: string;
+  };
+
   oem?: string;
   part_type?: string;
   surface_color?: string;
   length?: string;
   thread?: string;
-  // Legacy fields kept for backwards compatibility
-  oem_code: string;
-  oem_real: string | null;
-  category: string;
-  page: number;
-  norm: string | null;
-  thread_size: string | null;
+
+  oem_code?: string;
+  oem_real?: string | null;
+  category?: string;
+  page?: number;
+  norm?: string | null;
+  thread_size?: string | null;
   dim_d?: string | null;
   dim_l?: string | null;
   dim_dk?: string | null;
   dim_k?: string | null;
-  strength_class: string | null;
-  drive_type: string | null;
-  coating: string | null;
-  self_locking: boolean;
-}
-
-function na(value: unknown): string {
-  if (value === null || value === undefined) return '—';
-  const text = String(value).trim();
-  return text.length > 0 && text.toUpperCase() !== 'N/A' ? text : '—';
-}
-
-function isNA(value: unknown): boolean {
-  return na(value) === '—';
+  strength_class?: string | null;
+  drive_type?: string | null;
+  coating?: string | null;
+  self_locking?: boolean;
 }
 
 interface ApiResponse {
@@ -83,6 +77,16 @@ interface PartSeekViewProps {
 }
 
 const API_URL = 'http://localhost:8001';
+
+function na(value: unknown): string {
+  if (value === null || value === undefined) return 'N/A';
+  const text = String(value).trim();
+  return text.length > 0 ? text : 'N/A';
+}
+
+function isNotAvailable(value: unknown): boolean {
+  return na(value).toUpperCase() === 'N/A';
+}
 
 const signalColor = {
   GREEN:  '#10B981',
@@ -715,34 +719,37 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-bold uppercase tracking-widest text-white">
                 {results.length} matching parts
               </p>
-              <span className="text-[10px] text-muted-foreground">
-                {apiData?.signal_icon} {Math.round((apiData?.confidence ?? 0) * 100)}% confidence · {apiData?.time_ms}ms
+              <span className="text-[10px] text-slate-500">
+                {Math.round((apiData?.confidence ?? 0) * 100)}% confidence · {apiData?.time_ms}ms
               </span>
             </div>
 
             <div className="space-y-4">
               {results.map((part, i) => {
-                const icon = part.signal === 'GREEN' ? '🟢' : part.signal === 'YELLOW' ? '🟡' : '🔴';
+                const dims = {
+                  D:  part.dims?.D  ?? part.thread  ?? part.dim_d  ?? part.thread_size,
+                  Dk: part.dims?.Dk ?? part.dim_dk,
+                  l:  part.dims?.l  ?? part.length  ?? part.dim_l,
+                  k:  part.dims?.k  ?? part.dim_k,
+                };
                 const oems = [part.oem, part.oem_code, part.oem_real]
                   .filter(Boolean)
                   .flatMap(v => String(v).split(/[,;/]/))
                   .map(s => s.trim())
-                  .filter(s => s.length > 0 && s.toUpperCase() !== 'N/A' && s !== 'OEM-UNKNOWN');
-                const dims = {
-                  D:  part.dims?.D  ?? part.thread  ?? part.dim_d  ?? part.thread_size ?? undefined,
-                  Dk: part.dims?.Dk ?? part.dim_dk  ?? undefined,
-                  l:  part.dims?.l  ?? part.length  ?? part.dim_l  ?? undefined,
-                  k:  part.dims?.k  ?? part.dim_k   ?? undefined,
-                };
+                  .filter(s => s.length > 0 && s.toUpperCase() !== 'N/A');
+                const hasFa = !isNotAvailable(part.fa_max);
+                const hasFr = !isNotAvailable(part.fr_max);
+                const drawingNo = na(part.drawing_no);
+                const hasDrawing = drawingNo !== '—';
+                const hasRevision = part.revision && part.revision.toUpperCase() !== 'N/A';
 
                 return (
                   <motion.div
-                    key={part.rank}
+                    key={`${part.part_number ?? part.name ?? 'part'}-${i}`}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08, type: 'spring', stiffness: 300, damping: 30 }}
@@ -751,100 +758,93 @@ const PartSeekView: React.FC<PartSeekViewProps> = ({ query }) => {
                   >
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr]">
 
-                      {/* Left — ScrewSketch */}
-                      <div className="p-5" style={{ borderRight: '1px solid #1A314F' }}>
+                      {/* Left: sketch + legend */}
+                      <div className="p-5 border-b lg:border-b-0 lg:border-r" style={{ borderColor: '#1A314F' }}>
                         <ScrewSketch dims={dims} />
                       </div>
 
-                      {/* Right — Details */}
+                      {/* Right: part details */}
                       <div className="p-5 flex flex-col gap-4">
 
-                        {/* Header */}
-                        <div>
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="text-sm font-bold text-white leading-tight">
-                              {!isNA(part.name)
-                                ? na(part.name)
-                                : !isNA(part.part_type)
-                                  ? `${na(part.part_type)}${!isNA(part.thread) ? ' ' + na(part.thread) : ''}`
-                                  : !isNA(part.oem)
-                                    ? `Part · ${na(part.oem)}`
-                                    : 'Unknown part'}
+                        {/* Name + drawing link */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h3 className="text-base font-bold text-white leading-tight">
+                              {na(part.name)}
                             </h3>
-                            <span className="text-[11px] shrink-0">{icon}</span>
+                            <p className="text-sm mt-1" style={{ color: '#6B7E99' }}>
+                              {na(part.part_number)}
+                              {hasRevision ? ` · Rev. ${part.revision}` : ''}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5 flex-wrap text-[11px]">
-                            {!isNA(part.part_number) && (
-                              <span className="text-slate-400 font-mono">{na(part.part_number)}</span>
-                            )}
-                            {!isNA(part.revision) && (
-                              <span className="text-slate-500">· Rev. {na(part.revision)}</span>
-                            )}
-                            {!isNA(part.drawing_no) ? (
-                              <a href="#" className="text-sky-500 hover:underline">{na(part.drawing_no)}</a>
-                            ) : (
-                              <span className="text-slate-600">n/a</span>
-                            )}
-                          </div>
+                          {hasDrawing ? (
+                            <a
+                              href={`#${drawingNo}`}
+                              className="text-[11px] shrink-0 mt-0.5 font-mono hover:underline"
+                              style={{ color: '#3B82F6' }}
+                              title="Open drawing"
+                            >
+                              {drawingNo}
+                            </a>
+                          ) : (
+                            <span className="text-[11px] shrink-0 mt-0.5 font-mono" style={{ color: '#4B5563' }}>n/a</span>
+                          )}
                         </div>
 
-                        {/* Spec rows */}
-                        <div className="flex flex-col gap-1.5 text-[12px]">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Material</span>
-                            {isNA(part.material)
-                              ? <span className="text-slate-600">n/a</span>
-                              : <span className="text-white">{na(part.material)}</span>}
+                        {/* Properties */}
+                        <div className="flex flex-col gap-2.5">
+                          {[
+                            { label: 'Material', value: na(part.material) },
+                            { label: 'Surface',  value: na(part.surface ?? part.surface_color) },
+                            { label: 'Strength', value: na(part.strength_class) },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="flex items-baseline justify-between gap-4">
+                              <span className="text-sm shrink-0" style={{ color: '#6B7E99' }}>{label}</span>
+                              {value === '—'
+                                ? <span className="text-sm text-right" style={{ color: '#4B5563' }}>n/a</span>
+                                : <span className="text-sm text-right text-slate-200">{value}</span>
+                              }
+                            </div>
+                          ))}
+                          <div className="flex items-baseline justify-between gap-4">
+                            <span className="text-sm shrink-0" style={{ color: '#6B7E99' }}>Fa max</span>
+                            {hasFa
+                              ? <span className="text-sm text-right font-bold text-white">{na(part.fa_max)}</span>
+                              : <span className="text-sm text-right" style={{ color: '#4B5563' }}>n/a</span>
+                            }
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Surface</span>
-                            {isNA(part.surface ?? part.coating)
-                              ? <span className="text-slate-600">n/a</span>
-                              : <span className="text-white">{na(part.surface ?? part.coating)}</span>}
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500">Strength</span>
-                            {isNA(part.strength_class)
-                              ? <span className="text-slate-600">n/a</span>
-                              : <span className="text-white font-mono">{na(part.strength_class)}</span>}
-                          </div>
-                        </div>
-
-                        {/* Fa / Fr */}
-                        <div className="grid grid-cols-2 gap-3 text-[12px]">
-                          <div>
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Fa max</span>
-                            {isNA(part.fa_max)
-                              ? <span className="text-slate-600">n/a</span>
-                              : <span className="text-white font-bold">{na(part.fa_max)}</span>}
-                          </div>
-                          <div>
-                            <span className="text-slate-500 block text-[10px] uppercase tracking-wider">Fr max</span>
-                            {isNA(part.fr_max)
-                              ? <span className="text-slate-600">n/a</span>
-                              : <span className="text-white font-bold">{na(part.fr_max)}</span>}
+                          <div className="flex items-baseline justify-between gap-4">
+                            <span className="text-sm shrink-0" style={{ color: '#6B7E99' }}>Fr max</span>
+                            {hasFr
+                              ? <span className="text-sm text-right font-bold text-white">{na(part.fr_max)}</span>
+                              : <span className="text-sm text-right" style={{ color: '#4B5563' }}>n/a</span>
+                            }
                           </div>
                         </div>
 
                         {/* OEM pills */}
                         {oems.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {oems.map((o, idx) => (
+                          <div className="flex flex-wrap gap-2">
+                            {oems.map(oem => (
                               <span
-                                key={idx}
-                                className="text-[10px] px-2.5 py-0.5 rounded-full font-medium"
-                                style={{ border: '1px solid #3B82F6', color: '#60A5FA', background: '#1E3A5F44' }}
+                                key={oem}
+                                className="px-3 py-0.5 rounded-full text-xs font-semibold"
+                                style={{ border: '1px solid #3B82F6', color: '#3B82F6', background: '#3B82F610' }}
                               >
-                                {o}
+                                {oem}
                               </span>
                             ))}
                           </div>
                         )}
 
-                        {/* Footer */}
-                        <div className="flex gap-4 opacity-35 cursor-not-allowed select-none mt-auto">
-                          <span className="text-[10px] text-slate-400">📁 Used in projects</span>
-                          <span className="text-[10px] text-slate-400">🔧 Recommended torque values</span>
+                        {/* Footer — Phase 2 placeholders */}
+                        <div className="flex items-center gap-5 pt-1 mt-auto opacity-35" title="Coming in Phase 2">
+                          <span className="flex items-center gap-1.5 text-xs cursor-not-allowed" style={{ color: '#4B5563' }}>
+                            📁 Used in projects
+                          </span>
+                          <span className="flex items-center gap-1.5 text-xs cursor-not-allowed" style={{ color: '#4B5563' }}>
+                            🔧 Recommended torque values
+                          </span>
                         </div>
 
                       </div>
