@@ -57,13 +57,45 @@ def format_answer(query: str, results: list[dict], elapsed_ms: float) -> dict:
 
     top = results[0]
 
+    formatted_results = []
+    for result in results:
+        metadata = result.get("metadata") if isinstance(result.get("metadata"), dict) else {}
+
+        # Prefer explicit metadata payload when present; otherwise use flat result keys.
+        def read_field(key: str):
+            return metadata.get(key, result.get(key))
+
+        formatted_results.append({
+            "name": _na(read_field("name")),
+            "part_number": _na(read_field("part_number")),
+            "revision": _na(read_field("revision")),
+            "drawing_no": _na(read_field("drawing_no")),
+            "material": _na(read_field("material")),
+            "surface": _na(read_field("surface")),
+            "fa_max": _na(read_field("fa_max")),
+            "fr_max": _na(read_field("fr_max")),
+            "dims": {
+                "D": _na(read_field("thread")),
+                "Dk": _na(read_field("head_diameter")),
+                "l": _na(read_field("length")),
+                "k": _na(read_field("head_height")),
+            },
+            "oem": _na(read_field("oem")),
+            "part_type": _na(read_field("part_type")),
+            "surface_color": _na(read_field("surface_color")),
+            "length": _na(read_field("length")),
+            "thread": _na(read_field("thread")),
+            "score": result.get("score", 0.0),
+            "signal": result.get("signal", "RED"),
+        })
+
     return {
         "query":       query,
         "found":       True,
         "confidence":  top["score"],
         "signal":      top["signal"],
         "signal_icon": {"GREEN": "🟢", "YELLOW": "🟡", "RED": "🔴"}.get(top["signal"], "⚪"),
-        "results":     results,
+        "results":     formatted_results,
         "time_ms":     elapsed_ms,
     }
 

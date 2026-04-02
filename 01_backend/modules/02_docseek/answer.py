@@ -356,7 +356,7 @@ def compare_oems(
         result = compare_oems("corrosion", oem_codes=["OEM-G", "OEM-M"])
     """
     if oem_codes is None:
-        oem_codes = ["OEM-G", "OEM-M", "OEM-H", "OEM-S", "OEM-Z"]
+        oem_codes = ["GM", "Volvo", "MB", "DIN", "VW", "Ford", "China"]
 
     if verbose:
         print(f"Comparing: {topic}")

@@ -17,7 +17,7 @@ interface DocSeekViewProps {
 }
 
 type DocCategory = 'Corrosion' | 'Painting' | 'General';
-type DocOem = 'ALL' | 'OEM-G' | 'OEM-M' | 'OEM-Z' | 'OEM-H' | 'OEM-S';
+type DocOem = 'ALL' | 'GM' | 'MB' | 'Volvo' | 'DIN' | 'China';
 type DocIntent = 'REQUIREMENT' | 'COMPARE' | 'STANDARD';
 
 const CATEGORY_OPTIONS: Array<{ key: DocCategory; label: string; chunks: number }> = [
@@ -27,12 +27,11 @@ const CATEGORY_OPTIONS: Array<{ key: DocCategory; label: string; chunks: number 
 ];
 
 const OEM_OPTIONS: Array<{ key: DocOem; label: string; sub: string; chunks: number }> = [
-  { key: 'ALL', label: 'All OEMs / General', sub: 'OEM-UNKNOWN', chunks: 51 },
-  { key: 'OEM-G', label: 'OEM-G', sub: 'Mercedes', chunks: 7 },
-  { key: 'OEM-M', label: 'OEM-M', sub: 'GM', chunks: 14 },
-  { key: 'OEM-Z', label: 'OEM-Z', sub: 'Volvo', chunks: 8 },
-  { key: 'OEM-H', label: 'OEM-H', sub: 'Volvo Hades', chunks: 6 },
-  { key: 'OEM-S', label: 'OEM-S', sub: 'Internal', chunks: 7 },
+  { key: 'ALL',   label: 'All OEMs',  sub: 'General',       chunks: 51 },
+  { key: 'GM',    label: 'GM',        sub: 'General Motors', chunks: 14 },
+  { key: 'MB',    label: 'MB',        sub: 'Mercedes',       chunks: 7  },
+  { key: 'Volvo', label: 'Volvo',     sub: 'Volvo Cars',     chunks: 8  },
+  { key: 'DIN',   label: 'DIN',       sub: 'Norm',           chunks: 6  },
 ];
 
 const INTENT_OPTIONS: Array<{ key: DocIntent; label: string }> = [
@@ -51,12 +50,12 @@ function inferCategory(query: string): DocCategory | null {
 
 function inferOem(query: string): DocOem | null {
   const q = query.toLowerCase();
-  if (/(all oems|all oem|general|oem-unknown)/.test(q)) return 'ALL';
-  if (/(oem-g|mercedes)/.test(q)) return 'OEM-G';
-  if (/(oem-m|\bgm\b)/.test(q)) return 'OEM-M';
-  if (/(oem-z|volvo)/.test(q)) return 'OEM-Z';
-  if (/(oem-h|hades)/.test(q)) return 'OEM-H';
-  if (/(oem-s|internal)/.test(q)) return 'OEM-S';
+  if (/(all oems|all oem|general)/.test(q)) return 'ALL';
+  if (/(\bgm\b|general motors)/.test(q)) return 'GM';
+  if (/(\bmb\b|mercedes|mbn)/.test(q)) return 'MB';
+  if (/(volvo|vcs)/.test(q)) return 'Volvo';
+  if (/(\bdin\b|norm)/.test(q)) return 'DIN';
+  if (/(china)/.test(q)) return 'China';
   return null;
 }
 
@@ -229,7 +228,7 @@ const DocSeekView: React.FC<DocSeekViewProps> = ({ query, onSearch }) => {
       setSelectedOem(null);
       setSelectedIntent(null);
     }
-    setApiData(null);
+    setRealData(null);
     setLastRequestKey('');
   };
 
@@ -241,7 +240,7 @@ const DocSeekView: React.FC<DocSeekViewProps> = ({ query, onSearch }) => {
     } else if (!selectedIntent) {
       setSelectedIntent(inferIntent(query) ?? 'REQUIREMENT');
     }
-    setApiData(null);
+    setRealData(null);
     setLastRequestKey('');
   };
   

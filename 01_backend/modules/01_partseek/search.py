@@ -25,6 +25,7 @@ import re
 from pathlib import Path
 
 import chromadb
+from chromadb.utils.embedding_functions import OllamaEmbeddingFunction
 from rank_bm25 import BM25Okapi
 
 # ─────────────────────────────────────────────────────
@@ -100,8 +101,15 @@ def get_collection(
     collection_name: str = COLLECTION_NAME
 ) -> chromadb.Collection:
     """Connect to ChromaDB and return collection"""
+    ollama_ef = OllamaEmbeddingFunction(
+        url="http://localhost:11434/api/embeddings",
+        model_name="nomic-embed-text"
+    )
     client = chromadb.PersistentClient(path=db_path)
-    collection = client.get_collection(name=collection_name)
+    collection = client.get_collection(
+        name=collection_name,
+        embedding_function=ollama_ef
+    )
     return collection
 
 
@@ -225,12 +233,8 @@ def search_part_with_filter(
     
     # Build where filter - ChromaDB needs $and for multiple conditions
     conditions = [{"module": MODULE}]
-    if thread:
-        conditions.append({"thread": thread})
     if oem:
-        conditions.append({"oem": oem})
-    if material:
-        conditions.append({"material": material})
+        conditions.append({"oem_code": oem})
     
     # Use $and if multiple conditions, otherwise single condition
     where = conditions[0] if len(conditions) == 1 else {"$and": conditions}
