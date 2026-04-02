@@ -1,5 +1,5 @@
 # KnowSeek.ai — Sprint Plan
-**Version: rev09_Alpha — Last updated: 31.03.2026 — Branch: main_sia09**
+**Version: rev09.001 — Last updated: 02.04.2026 — Branch: main_sia11**
 *Solo Project — Antonios Simeonidis*
 
 ---
@@ -8,346 +8,180 @@
 
 | Date | Deliverable | Status |
 |------|-------------|--------|
-| 20.03.2026 | **Midterm** ✅ — PPT delivered | ✅ Done |
+| 20.03.2026 | **Midterm** — PPT delivered | ✅ Done |
 | 27.03.2026 | **Dry Run** — Live demo | ✅ Done |
-| **02.04.2026** | **Stakeholder Presentation** | 🔜 **CRITICAL** |
+| **02.04.2026** | **Stakeholder Presentation** | ✅ Done |
 
 ---
 
-## Final Sprint Tasks — rev08.001 & rev09 (31.03. – 01.04.)
+## Component Status — rev09.001 (02.04.2026)
 
-| Day | Issue | Task | Component | Status |
-|-----|-------|------|-----------|--------|
-| 31.03 | #70 | **Survival Fix (rev08.001):** Over-Retrieval N×4 + BM25 Hybrid Pool | `search.py` | ✅ Done (rev08_003) |
-| 31.03 | #71 | **Survival Fix (rev08.001):** Metadata-Pass Extension — thread/material/oem fields in ingest | `ingest.py` | ✅ Done (rev08.001) |
-| 31.03 | #75 | **Data Pipeline:** `split_gm_catalog.py` — GM pages per thread size | root | ✅ Done |
-| 31.03 | #76 | **Data Pipeline:** `split_volvo_catalog.py` — Volvo fastener pages | root | ✅ Done |
-| 31.03 | #77 | **Validation:** `test_extraction.py` — 4-case extraction test suite | root | ✅ Done |
-| 01.04 | #72 | **Precision Booster (rev09):** Keyword-Booster (Hydrogen/Shear) | `search.py` | 🔜 Next |
-| 01.04 | #73 | **Precision Booster (rev09):** Confidence Re-Calibration 🟢🟡🔴 | `answer.py` | 🔜 Backlog |
-| 01.04 | #74 | **PPT Production:** Stakeholder Presentation (4h Block) | `docs/` | 🔜 Backlog |
-| 02.04 | — | **Final Delivery & Live Demo** | — | 🔜 Backlog |
+| Component | Version | Status |
+|-----------|---------|--------|
+| Frontend UI | rev09.001 | ✅ Running port 8081 |
+| PartSeekView.tsx | rev09.001 | ✅ Real API + Focus Track UI |
+| DocSeekView.tsx | rev09.001 | ✅ Real API + 3-level Track UI |
+| ScrewSketch.tsx | rev09.001 | ✅ SVG technical drawing |
+| Ollama + llama3 | 0.17.7 | ✅ Running |
+| nomic-embed-text | 274MB | ✅ Installed |
+| ChromaDB | 1.5.5 | ✅ 4807 chunks + 692 PartSeek |
+| rank-bm25 | 0.2.2 | ✅ Installed |
+| MLFlow | 3.10.1 | ✅ Running port 5000 |
+| ingest.py (DocSeek) | rev09.001 | ✅ Real OEM names (GM/Volvo/MB/DIN/VW/Ford) |
+| search.py (DocSeek) | rev09.001 | ✅ Ollama embedding fix |
+| answer.py (DocSeek) | rev09.001 | ✅ OEM codes updated |
+| ingest.py (PartSeek) | rev09.001 | ✅ Metadata: thread/material/oem/part_type |
+| search.py (PartSeek) | rev09.001 | ✅ Ollama embedding fix + oem_code field fix |
+| answer.py (PartSeek) | rev09.001 | ✅ Structured output + collision |
+| FastAPI main.py | rev09.001 | ✅ Running port 8001 |
+| track_engine.py | rev08.001 | ✅ Active |
+| EDA Notebook | rev09.001 | ✅ Chapter 1-6 + BASE_PATH fix |
+| RnD_DESCRIPTION.md | rev09.001 | ✅ Updated 02.04.2026 |
+| Stakeholder PPT | rev09.001 | ✅ PDF in 03_docs/ |
+| requirements.txt | rev09.001 | ✅ plotly added |
+
+---
+
+## Final Sprint — main_sia10 (01.04. – 02.04.) ✅ DONE
+
+| Issue | Task | Status |
+|-------|------|--------|
+| #80 | Fix ChromaDB embedding conflict (Ollama missing in search.py PartSeek) | ✅ Done |
+| #81 | Fix oem_code field name → oem in search_part_with_filter | ✅ Done |
+| #82 | Remove invalid thread/material filter from main.py PartSeek route | ✅ Done |
+| #83 | Replace anonymous OEM codes with real names (GM/Volvo/MB/DIN/VW/Ford) | ✅ Done |
+| #84 | Add GM + Volvo to CATEGORY_MAP in ingest.py | ✅ Done |
+| #85 | Fix DocSeek incomplete block — oem_code no longer required | ✅ Done |
+| #86 | Add VCS → Volvo to OEM_MAP | ✅ Done |
+| #87 | Fix BASE_PATH in EDA Notebook (cwd-based, no hardcoded paths) | ✅ Done |
+| #88 | Fix f-string syntax error in EDA Notebook | ✅ Done |
+| #89 | Fix setApiData → setRealData in DocSeekView.tsx | ✅ Done |
+| #90 | Update DocOem types — real OEM names in Frontend | ✅ Done |
+| #91 | PartSeek ingest restored — metadata extraction active | ✅ Done |
+| #92 | Remove duplicate chroma_db in 06_notebooks/ | ✅ Done |
+| #93 | Add plotly to requirements.txt | ✅ Done |
+| #94 | Stakeholder PDF pushed to GitHub | ✅ Done |
+
+---
+
+## Week 4 — Retrieval Refactor + Precision Pivot (main_sia09) ✅ DONE
+
+| Issue | Task | Status |
+|-------|------|--------|
+| #60 | Build Track Engine | ✅ |
+| #61 | Integrate Track Engine in FastAPI | ✅ |
+| #62 | PartSeek: Apply metadata filter before search | ✅ |
+| #63 | PartSeek: Remove LLM call | ✅ |
+| #64 | DocSeek: Apply metadata filter before semantic search | ✅ |
+| #65 | DocSeek: Improve LLM prompt | ✅ |
+| #66 | Chunking: Reduce chunk_size → 250, re-ingest | ✅ |
+| #70 | Over-Retrieval N×4 pool + BM25 Hybrid (60/40) | ✅ |
+| #71 | Metadata-Pass: extract_thread/material/oem/part_type | ✅ |
+| #75 | Data Pipeline: split GM catalog | ✅ |
+| #76 | Data Pipeline: split Volvo catalog | ✅ |
+| #77 | Extraction Validation: 4-case test | ✅ |
+
+---
+
+## Week 3 — DocSeek + PartSeek + FastAPI (main_sia05–08) ✅ DONE
+
+| Branch | Task | Status |
+|--------|------|--------|
+| main_sia05 | FastAPI health + docseek + partseek | ✅ |
+| main_sia06 | ChromaDB restructured → knowseek | ✅ |
+| main_sia07 | Hybrid Search BM25 + Domain Filter | ✅ |
+| main_sia07 | PartSeekView.tsx — real API connected | ✅ |
+| main_sia08 | EDA Chapter 1-6 complete | ✅ |
+
+---
+
+## Week 2 — Midterm (17–20.03) ✅ DONE
+
+| Task | Status |
+|------|--------|
+| EDA Chapter 6 — BM25 vs RAG comparison | ✅ |
+| Answer time measured + visualized | ✅ |
+| Midterm PPT delivered | ✅ 20.03.2026 |
+
+---
+
+## Week 1 — Setup (10–16.03) ✅ DONE
+
+| Task | Status |
+|------|--------|
+| GitHub repo structure | ✅ |
+| Ollama + llama3 + nomic-embed-text | ✅ |
+| ChromaDB + rank-bm25 | ✅ |
+| MLFlow running | ✅ |
+| OCR pipeline | ✅ |
+| Frontend UI Design | ✅ |
 
 ---
 
 ## Capstone Requirements Checklist
 
 - [x] Business question clearly stated with background and impact
-- [x] Technical EDA completed in Python
-- [x] Multiple models tried and compared
+- [x] Technical EDA completed in Python (Chapter 1-6)
+- [x] Multiple models tried and compared (BM25 vs RAG)
 - [x] MLFlow experiment tracking in place
 - [x] All work stored in GitHub repo
-- [ ] **Final presentation slides in GitHub repo** (Deadline: 02.04.)
-- [ ] **10 min presentation ready** (Timed rehearsal)
+- [x] Final presentation PDF in GitHub repo
+- [x] 10 min presentation ready
 - [x] Solo approval confirmed by coach
 
 ---
 
-## PPT Deliverables Overview
+## Demo Scenarios — 02.04.2026
 
-| PPT | When | Audience | Purpose |
-|-----|------|----------|---------|
-| Midterm PPT | 20.03 ✅ | Coach / Bootcamp | Business case + EDA + model comparison |
-| Technical PPT | 26.03 | Technical audience | RAG + Hybrid Search + architecture |
-| Stakeholder PPT | 27.03 | Business audience | Problem + solution + demo + value |
-
----
-
-## Week 1 — Repo + Frontend + PM + Environment ✅
-
-### Completed ✅
-
-- [x] Frontend UI Design finalized — Lovable exported + tested
-- [x] GitHub repo structure clean — Folder 01–06 in place
-- [x] README rev06_001 — macOS + Windows + Linux setup
-- [x] Sprint Plan + DEV_NOTES created
-- [x] GitHub Projects Board — 44 issues, 3 milestones
-- [x] OEM Anonymization schema defined
-- [x] Frontend glow + pulse animations
-- [x] Ollama v0.17.7 + llama3 + nomic-embed-text
-- [x] ChromaDB 1.5.5 + rank-bm25 0.2.2
-- [x] Python venv + requirements.txt ✅
-- [x] MLFlow running on port 5000 ✅
-- [x] #30 🎯 Confidence score 🟢🟡🔴 on every result ✅
-- [x] #31 🎯 Multi language DE + EN working ✅
-- [x] #32 🎯 Zero data leaves local machine — verified ✅
-- [x] OCR pipeline — pytesseract + fpdf2 ✅
-- [x] check_pdfs.py rev06_001 — auto OCR in utils/ ✅
-- [x] EDA Chapter 1-3 complete ✅
-
----
-
-## Week 2 — Midterm (17–20.03) ✅
-
-| Day | Issue | Task | Status |
-|-----|-------|------|--------|
-| 17.03 | #11 | EDA Chapter 6 — BM25 vs RAG comparison | ✅ |
-| 17.03 | #29 🎯 | Answer time measured + visualized | ✅ |
-| 18–19.03 | #19 | Midterm PPT — build | ✅ |
-| 20.03 | — | **Midterm Presentation** | ✅ Delivered |
-
----
-
-## Week 3 — DocSeek + PartSeek + FastAPI + Hybrid Search (21–26.03)
-
-### Completed in main_sia05 → main_sia08 ✅
-
-| Branch | Issue | Task | Rev | Status |
-|--------|-------|------|-----|--------|
-| main_sia05 | — | Load more documents | — | ✅ 39 docs / 121 chunks |
-| main_sia05 | #15 | FastAPI — health + docseek + partseek | rev05_003 | ✅ |
-| main_sia05 | #18 | DocSeek end-to-end | rev05_003 | ✅ |
-| main_sia06 | — | ChromaDB restructured "docseek" → "knowseek" | rev06_001 | ✅ |
-| main_sia07 | — | ingest.py — CATEGORY_MAP + get_module() | rev06_001 | ✅ |
-| main_sia07 | — | search.py DocSeek — module filter | rev06_001 | ✅ |
-| main_sia07 | — | answer.py DocSeek — RAG + OEM comparison | rev06_001 | ✅ |
-| main_sia07 | — | search.py PartSeek — module="partseek" filter | rev06_001 | ✅ |
-| main_sia07 | — | answer.py PartSeek — structured + collision | rev06_001 | ✅ |
-| main_sia07 | — | ingest.py PartSeek — wrapper → DocSeek | rev06_001 | ✅ |
-| main_sia07 | — | main.py — importlib fix + health check | rev06_002 | ✅ |
-| main_sia07 | — | EDA Notebook Chapter 1-6 | rev06_002 | ✅ |
-| main_sia07 | — | PartSeekView.tsx — real API connected | rev06_001 | ✅ |
-| main_sia07 | #40 | Hybrid Search BM25 + Domain Filter | rev06_002 | ✅ |
-| main_sia07 | — | search.py DocSeek — Domain + BM25 Reranking | rev06_002 | ✅ |
-| main_sia07 | — | answer.py DocSeek — llama3 only GREEN/YELLOW | rev06_002 | ✅ |
-| main_sia07 | — | yolo_ingest.py — LLaVA + YOLO image ingest | rev07_001 | ✅ |
-| main_sia07 | — | yolo_train.py — YOLO training pipeline | rev07_001 | ✅ |
-| main_sia07 | — | YOLO_GUIDE.md — training guide | rev07_001 | ✅ |
-| main_sia07 | — | RnD_DESCRIPTION.md — Hybrid Search documented | rev07_001 | ✅ |
-
-### Open — main_sia08 🔜
-
-| Day | Issue | Task | Deliverable |
-|-----|-------|------|-------------|
-| 27.03 | #41 | EDA Chapter 6.3 — real confidence classes (Green/Yellow/Red) | ✅ Measured, no synthetic scores |
-| 27.03 | — | EDA Chapter 6.1 — hardcoded values removed | ✅ Runtime benchmark now fully measured |
-| 27.03 | — | EDA Chapter 6.4 — denominator fix + color update | ✅ Scores no longer identical, Detailed=orange |
-| 26.03 | #42 | DocSeekView.tsx — connected to real API | Answer + signal + sources shown |
-| 26.03 | #33 🎯 | DocSeek — 3 OEM comparisons working | Demo scenario runs without errors |
-| 26.03 | #34 🎯 | Risk table correct | same / different / conflict verified |
-| 26.03 | #35 🎯 | Source link clickable on every result | Manual test |
-| 26.03 | #36 🎯 | PartSeek — text search + time visualized | Measured + shown in EDA.ipynb |
-| 26.03 | #37 🎯 | Team collision warning works | Tested with 2 similar part queries |
-| 26.03 | #38 🎯 | All metadata shown on part result | Material, strength, OEM verified |
-| 26.03 | #43 | YOLO/LLaVA — ollama pull llava + test | 10 images ingested |
-| 26.03 | #27 | **Technical PPT — build** | See slide structure below |
-| 26.03 | — | Before/After Zeitvergleich | Human: 2h vs KnowSeek: 3s |
-| 26.03 | — | ROI Rechnung | 1 day saved per employee per year |
-| 26.03 | #22 | Full dress rehearsal | 10 min timed |
-| 26.03 | — | GitHub repo final check | All files in place |
-
-
-## Week 3 — Korrekture  + ChromaDB Restructuring (24.03) Issue with chromeDB Architecture
-
-### Completed in main_sia07 ✅
-
-- [x] Backup ChromaDB — `cp -r chroma_db chroma_db_backup_sia05`
-- [x] migrate_chromadb.py — "docseek" → "knowseek" + module field
-- [x] 02_docseek/ingest.py — COLLECTION_NAME + metadata["module"]="docseek"
-- [x] 02_docseek/search.py — COLLECTION_NAME + where module filter
-- [x] 02_docseek/answer.py — COLLECTION_NAME update
-- [x] 01_partseek/search.py — COLLECTION_NAME + where module filter
-- [x] 01_partseek/ingest.py — COLLECTION_NAME + metadata["module"]="partseek"
-- [x] 01_partseek/answer.py — COLLECTION_NAME update
-- [x] main.py health check — knowseek + chunks per module ✅
-- [ ] EDA Notebook — alle "docseek" → "knowseek" (Ch 1,2,3,4,6)
-- [ ] Verification — curl health + docseek query + partseek query
-- [ ] #16 Frontend mit Backend verbinden
-- [ ] #33 DocSeek 3 OEM comparisons Demo
-- [ ] #34 Risk table correct
-- [ ] #35 Source link clickable
-- [ ] #36 PartSeek text search visualized
-- [ ] #37 Team collision warning
-- [ ] #38 All metadata shown
-- [ ] #27 Technical PPT
-- [ ] Before/After Zeitvergleich — Human 2h vs KnowSeek 3s
-- [ ] ROI Rechnung — 1 day saved per employee per year
-- [ ] #22 Full dress rehearsal 26.03
-- [ ] GitHub repo final check
-
-
-### New Issues 26.03 — main_sia07 🔜
-
-| Issue | Task | Status |
-|-------|------|--------|
-| #53 | Hybrid Search BM25 + Domain Filter — DocSeek search.py rev06_002 | 🔜 In Progress |
-| #54 | EDA Chapter 6.3 — Hybrid Search confidence visualization | 🔜 Backlog |
-| #55 | DocSeekView connected to real API | 🔜 In Progress |
-| #56 | feat: YOLO/LLaVA image search for PartSeek — Phase 2 | 🔜 Backlog |
-| #57 | setup: Install LLaVA — ollama pull llava | 🔜 Backlog |
-
-### Technical PPT — Slide Structure
-
-| Slide | Content |
-|-------|---------|
-| 1 | Title — KnowSeek.ai Technical Overview |
-| 2 | RAG Pipeline — Step by step |
-| 3 | Hybrid Search — BM25 + Semantic — Why + How |
-| 4 | Embedding Model Evaluation — Why nomic-embed-text |
-| 5 | Chunking Strategy — Document types + parameters |
-| 6 | ChromaDB Architecture — One collection + module filtering |
-| 7 | MLFlow — Experiment results |
-| 8 | System Architecture — Ports + Data Flow |
-| 9 | Known Limitations + Mitigations |
-| 10 | Phase 2 Roadmap — YOLO + NormSeek |
-
----
-
-## Week 4 — Final Demo + Stakeholder PPT (27.03)
-
-| Issue | Task | Deliverable |
-|-------|------|-------------|
-| #28 | **Stakeholder PPT finalized** | See slide structure below |
-| #21 | All PPTs pushed to GitHub | `04_progress/` |
-| — | Live demo running | DocSeek + PartSeek on local machine |
-| — | Repo clean | No temp files, all committed |
-| — | **Final Presentation delivered** | 10 min — live demo included |
-
----
-
-## Week 4 — Retrieval Refactor + Precision Pivot (29.03 - 31.03 / main_sia09)
-
-**Goal:** Implement rev08.001 — Filter-Driven Retrieval + Hybrid Precision (rev09).
-
-### Architecture Change Summary
-
-| Before (rev07) | After (rev08.001 / rev08_003) |
-|---|---|
-| Query → Semantic Search → BM25 → LLM | Query → Track Engine → Filter → N×4 Retrieval → BM25 Rerank → optional LLM |
-| Large unfiltered search space | Narrow pre-filtered, deeper search pool |
-| Scores stuck ~0.78–0.82 YELLOW | Thread-exact results boosted +50%, target GREEN |
-
-### Sprint Tasks — main_sia09
-
-| Issue | Task | File | Status |
-|-------|------|------|--------|
-| #60 | Build Track Engine | `utils/track_engine.py` NEW | ✅ |
-| #61 | Integrate Track Engine in FastAPI | `main.py` UPDATE | ✅ |
-| #62 | PartSeek: Apply metadata filter before search | `01_partseek/search.py` UPDATE | ✅ |
-| #63 | PartSeek: Remove LLM call | `01_partseek/answer.py` UPDATE | ✅ |
-| #64 | DocSeek: Apply metadata filter before semantic search | `02_docseek/search.py` UPDATE | ✅ |
-| #65 | DocSeek: Improve LLM prompt (best chunk selection) | `02_docseek/answer.py` UPDATE | ✅ |
-| #66 | Chunking: Reduce chunk_size 500 → 250, re-ingest | `02_docseek/ingest.py` UPDATE | ✅ |
-| #67 | Evaluate n_results 5 → 10 (recall test) | `search.py` both modules | ✅ |
-| #70 | Over-Retrieval N×4 pool + BM25 Hybrid scoring (60/40) | `01_partseek/search.py` rev08_003 | ✅ |
-| #71 | Metadata-Pass: extract_thread/material/oem/part_type/surface_color | `01_partseek/ingest.py` rev08.001 | ✅ |
-| #75 | Data Pipeline: split GM catalog by thread size | `split_gm_catalog.py` | ✅ |
-| #76 | Data Pipeline: split Volvo catalog pages | `split_volvo_catalog.py` | ✅ |
-| #77 | Extraction Validation: 4-case test (Volvo/DIN/GM/Stainless) | `test_extraction.py` | ✅ |
-
-### Definition of Done (rev08.001 + rev08_003)
-
-- [x] `track_engine.py` — `analyze_query()` + `build_where_filter()` implemented
-- [x] Missing fields returned to frontend for Track UI
-- [x] ChromaDB uses `where=filter` BEFORE semantic search
-- [x] PartSeek returns deterministic results without LLM
-- [x] DocSeek LLM receives ranked + filtered chunks
-- [x] Score > 0.85 reachable on known test queries
-- [x] Debug logging in place: `TRACK:` + `FILTER:` printed
-- [x] `search.py` rev08_003 — N×4 pool, BM25 Hybrid (60/40), Thread-Boost ×1.5
-- [x] `ingest.py` rev08.001 — structured metadata extraction (thread, material, oem, part_type, surface_color)
-- [x] GM + Volvo catalog PDF splitters ready for re-ingest
-- [x] Extraction regression tests pass (4 test cases)
-
-### Stakeholder PPT — Slide Structure
-
-| Slide | Content |
-|-------|---------|
-| 1 | Title — KnowSeek.ai |
-| 2 | The Problem — time lost, knowledge silos + ROI impact |
-| 3 | Before/After — Human 2h vs KnowSeek 3s |
-| 4 | The Solution — what KnowSeek.ai does |
-| 5 | Live Demo — DocSeek (OEM comparison) |
-| 6 | Live Demo — PartSeek (part search) |
-| 7 | Trust Signal — Confidence 🟢🟡🔴 explained |
-| 8 | Data Privacy — 100% local, no cloud |
-| 9 | OKR Results + ROI |
-| 10 | Roadmap — Phase 2 + Phase 3 |
-
----
-
-## Component Status
-
-| Component | Version | Status |
-|-----------|---------|--------|
-| Frontend UI | rev02_001 | ✅ Done |
-| AppSidebar.tsx | rev02_001 | ✅ Colors correct |
-| SearchBlock.tsx | rev02_001 | ✅ Glow correct |
-| PartSeekView.tsx | rev06_001 | ✅ Real API connected |
-| DocSeekView.tsx | — | 🔜 #42 main_sia08 |
-| Ollama + llama3 | 0.17.7 | ✅ Running |
-| nomic-embed-text | 274MB | ✅ Installed |
-| ChromaDB | 1.5.5 | ✅ Installed |
-| rank-bm25 | 0.2.2 | ✅ Installed |
-| MLFlow | 3.10.1 | ✅ Running — BM25 + RAG logged |
-| 05_data | — | ✅ 39 docs / 293 chunks / 4 categories |
-| ingest.py (DocSeek) | rev08_001 | ✅ Auto chunk profiles (250/50, 180/30, 350/50) |
-| search.py (DocSeek) | rev08_001 | ✅ Filter-first retrieval + hybrid search |
-| answer.py (DocSeek) | rev08_001 | ✅ Prompt fix: best chunk + OEM focus |
-| check_pdfs.py | rev06_001 | ✅ Done — auto OCR pipeline |
-| ingest.py (PartSeek) | **rev08.001** | ✅ Metadata extraction: thread/material/oem/part_type/surface_color |
-| search.py (PartSeek) | **rev08_003** | ✅ N×4 pool + BM25 Hybrid (60/40) + Thread-Boost ×1.5 |
-| answer.py (PartSeek) | rev08_001 | ✅ No LLM + deterministic output |
-| FastAPI main.py | rev08_001 | ✅ Running — port 8001 — unified /api/query |
-| **track_engine.py** | **rev08_001** | **✅ Active core component** |
-| split_gm_catalog.py | rev06_001 | ✅ GM Fastener Catalog PDF splitter |
-| split_volvo_catalog.py | rev01_001 | ✅ Volvo Design Guidelines PDF splitter |
-| test_extraction.py | — | ✅ 4-case metadata extraction regression tests |
-| EDA Notebook | rev07_002 | ✅ Chapter 1-6 complete |
-| Midterm PPT | rev05_003 | ✅ Delivered 20.03.2026 |
-| Technical PPT | — | 🔜 main_sia09 |
-| Stakeholder PPT | — | 🔜 **01.04 — 4h Block** |
-| RnD_DESCRIPTION.md | rev09_Alpha | ✅ §32–35 added 31.03.2026 |
-| SPRINT_PLAN.md | rev09_Alpha | ✅ Updated 31.03.2026 |
-| README.md | rev06_001 | ✅ Done |
-| requirements.txt | rev06_001 | ✅ Done |
-| build_ppt.py | rev05_002 | ✅ Done |
-| docker-compose.yml | — | 🔜 Phase 2 |
-
----
-
-## GitHub Projects Board
-
+### DocSeek
+```bash
+curl -X POST http://localhost:8001/api/docseek/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "corrosion requirements for automotive components"}'
 ```
-Backlog → In Progress → Review → Done
+Expected: confidence ~0.88 🟢, sources from KTL + Volvo docs
+
+### PartSeek
+```bash
+curl -X POST http://localhost:8001/api/partseek/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "flange screw Volvo"}'
 ```
-
-Tags: `frontend` `backend` `data` `ppt` `docs` `fix` `security` `okr`
-
-Milestones:
-- Week 1: Environment + Setup ✅
-- Week 2: Midterm Presentation ✅
-- Week 3: Final Presentation Due: 27.03.2026
+Expected: found: true, material: Steel, oem: Volvo, part_type: flange_screw
 
 ---
 
-## GitHub CLI — Useful Commands
+## Services Start — Demo Day
 
 ```bash
-# Show all issues
-gh issue list --limit 50 --state all --json number,title,state,labels | python3 -c "
-import json,sys
-issues = json.load(sys.stdin)
-for i in issues:
-    labels = [l['name'] for l in i['labels']]
-    print(f\"#{i['number']:3} {i['state']:6} {', '.join(labels):15} {i['title'][:50]}\")
-"
+cd /Users/asimeoa/aipm-1711/KnowSeek
+source .venv/bin/activate
+brew services start ollama
+python3 01_backend/main.py
 
-# Close an issue
-gh issue close <number>
-
-# Create a label
-gh label create "labelname" --color "#HEX" --description "description"
-
-# Create an issue
-gh issue create \
-  --title "Title" \
-  --body "Description" \
-  --label "backend" \
-  --milestone "Week3: Final Presentation Due: 27.03.2026"
+# New terminal:
+cd 02_frontend/01_src
+npm run dev
 ```
+
+URLs:
+- Frontend: http://localhost:8081
+- Backend: http://localhost:8001
+- MLFlow: http://localhost:5000
 
 ---
 
-*Save in: `04_progress/sprint_logs/SPRINT_PLAN.md`*
-*Version: rev05_005 — Last updated: 26.03.2026 — Branch: main_sia07*
+## Phase 2 Roadmap (after Capstone)
+
+| Feature | Notes |
+|---------|-------|
+| NormSeek.ai | ISO / OEM norm comparison |
+| SQL/ERP integration for PartSeek | Exact thread/material filter |
+| YOLO image search | Start with 10 images |
+| Docker Compose | One-command startup |
+| Multi-user + auth | Team features |
+| Auto folder watcher | watchdog library |
+
+---
+
+*Version: rev09.001 — Last updated: 02.04.2026 — Branch: main_sia11*
